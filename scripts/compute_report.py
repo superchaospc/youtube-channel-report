@@ -29,6 +29,11 @@ def wan(n, d=None):
     return f"{n / 1e4:,.{d}f} 万"
 
 
+def views_text(n):
+    """Views in 万 when large, plain digits when under 10,000 (0.1 万 reads badly)."""
+    return wan(n) if n >= 1e4 else f"{round(n):,} 次"
+
+
 def fmt(n):
     return f"{round(n):,}"
 
@@ -90,7 +95,7 @@ def main():
     as_of = d(cfg.get("as_of") or dt.date.today().isoformat())
     rate, rate_src = fx_rate(cfg)
     cny = lambda x: "¥" + fmt(x * rate)
-    cnyw = lambda x, k=1: "¥" + wan(x * rate, k)
+    cnyw = lambda x, k=1: "¥" + wan(x * rate, k) if x * rate >= 1e4 else "¥" + fmt(x * rate)
 
     titles_zh = load_json(base, cfg.get("titles_zh"), {}) or {}
     topics_raw = load_json(base, cfg.get("topics"), None)
@@ -105,6 +110,7 @@ def main():
         ch["shorts"] = [v for v in json.load(open(os.path.join(dd, "shorts.json"))) if v.get("date")]
         ch["main"] = i == 0
         ch["label"] = c.get("label") or ("主频道" if i == 0 else f"频道 {i + 1}")
+        ch["name"] = c.get("name") or short_title(ch["about"].get("title") or "", 14)
         ch["shorts_rpm"] = c.get("shorts_rpm", SHORTS_RPM_DEFAULT)
         ch["long_views"] = sum(v["views"] for v in ch["long"])
         ch["shorts_views"] = sum(v["views"] for v in ch["shorts"])
@@ -320,7 +326,7 @@ def main():
                   "right": {"title": "RPM 由多种因素共同决定", "chips": ["观众来源（国家）", "题材", "视频时长", "语言", "季节"], "text": "英语内容、欧美观众多、视频 8 分钟以上能插中间广告，RPM 都会更高。"}})
     for ch in chans[1:]:
         top3 = sorted(ch["long"], key=lambda v: -v["views"])[:3]
-        S.append({"type": "channel_card", "eyebrow": f"{ch['label']}收入", "title": f"{ch['label']} {ch['about'].get('title')}：约 {cnyw(ch['usd'])}", "bg": "alt",
+        S.append({"type": "channel_card", "eyebrow": f"{ch['label']}收入", "title": f"{ch['label']} {ch['name']}：约 {cnyw(ch['usd'])}", "bg": "alt",
                   "tiles": [{"value": f"{len(ch['long'])} 条", "label": "长视频"}, {"value": wan(ch["long_views"], 0), "label": "长视频播放"},
                             {"value": f"${ch['rpm']}", "label": "RPM" + (f"（{ch['rpm_note']}）" if ch.get("rpm_note") else ""), "accent": True},
                             {"value": cny(ch["long_usd"] / max(len(ch["long"]), 1)), "label": "平均每条"}],
@@ -368,9 +374,9 @@ def main():
         bul.append(f"{sub['label']}平均每条 {cny(sub['long_usd'] / max(len(sub['long']), 1))}，约为{main['label']}的 1/{max(round(per_video / max(sub['long_usd'] / max(len(sub['long']), 1), 1)), 1)}。")
     S.append({"type": "stats4", "eyebrow": "平均每条", "title": f"{main['label']}平均每条长视频约 {cnyw(per_video)}",
               "tiles": [{"label": "平均", "value": cny(per_video), "sub": usd(per_video), "dark": True},
-                        {"label": "中位数", "value": cny(median_v / 1000 * main["rpm"]), "sub": f"{wan(median_v)}播放"},
-                        {"label": "最高", "value": cny(rev(vids[0])), "sub": f"{wan(vids[0]['views'])}播放"},
-                        {"label": "最低", "value": cny(rev(vids[-1])), "sub": f"{wan(vids[-1]['views'])}播放"}],
+                        {"label": "中位数", "value": cny(median_v / 1000 * main["rpm"]), "sub": f"{views_text(median_v)}播放"},
+                        {"label": "最高", "value": cny(rev(vids[0])), "sub": f"{views_text(vids[0]['views'])}播放"},
+                        {"label": "最低", "value": cny(rev(vids[-1])), "sub": f"{views_text(vids[-1]['views'])}播放"}],
               "bullets": bul})
     S.append({"type": "table", "section": "内容分析", "eyebrow": "爆款视频", "title": "播放最高的 10 条视频，各赚了多少",
               "columns": [{"label": "#", "align": "left", "width": 0.045}, {"label": "视频标题（中译）" if titles_zh else "视频标题", "align": "left", "width": 0.465},
@@ -418,7 +424,7 @@ def main():
         if "shorts_per_month" in c:
             fm, fn = c["shorts_first_month"]
             b.append(f"Shorts {c['shorts_n']} 条，每月 {c['shorts_per_month']:.1f} 条（{fm} 起步月 {fn} 条）")
-        cols.append({"title": f"{ch['label']} {ch['about'].get('title', '')}", "bullets": b})
+        cols.append({"title": f"{ch['label']} {ch['name']}", "bullets": b})
     if len(chans) > 1:
         cols.append({"title": "所有频道合计", "dark": True, "bullets": [f"长视频 {all_long} 条，平均每月 {combined['long_per_month']:.1f} 条（约每周 {combined['long_per_month'] / 4.345:.1f} 条）",
                                                                    f"加上 Shorts 共 {all_items} 条，平均每月约 {combined['all_per_month']:.0f} 条"]})

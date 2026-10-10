@@ -357,8 +357,10 @@ R.three_cols = (s, d) => {
   cols.forEach((c, i) => {
     const x = MX + i * (W + GAP), y = 2.15, dark = !!c.dark;
     box(s, x, y, W, h, dark ? C.text1 : C.background2, "col-" + (i + 1));
-    txt(s, c.title || "", { x: x + 0.3, y: y + 0.25, w: W - 0.6, h: 0.4, fontSize: 16, bold: true, color: dark ? C.background1 : C.accent1 });
-    txt(s, bullets(c.bullets || []), { x: x + 0.3, y: y + 0.75, w: W - 0.6, h: h - 0.9, fontSize: 13, color: dark ? C.background1 : C.text1, paraSpaceAfter: 8, lineSpacingMultiple: 1.15 });
+    // A title that needs two lines pushes the bullets down instead of overlapping them.
+    const tl = widthPt(c.title || "", 16) > (W - 0.6) * 72 ? 2 : 1;
+    txt(s, c.title || "", { x: x + 0.3, y: y + 0.25, w: W - 0.6, h: 0.4 * tl, fontSize: 16, bold: true, color: dark ? C.background1 : C.accent1, wrap: true });
+    txt(s, bullets(c.bullets || []), { x: x + 0.3, y: y + 0.4 + 0.35 * tl, w: W - 0.6, h: h - 0.55 - 0.35 * tl, fontSize: 13, color: dark ? C.background1 : C.text1, paraSpaceAfter: 8, lineSpacingMultiple: 1.15 });
   });
   if (d.banner) {
     box(s, MX, 5.6, CW, 0.95, C.accent1, "banner");
@@ -398,7 +400,7 @@ R.cards = (s, d) => {
     // Cards take the opposite tone of the slide background so they stay visible on either.
     box(s, x, y, W, H, dark ? C.text1 : col(c.fill, d.bg === "alt" ? C.background1 : C.background2), "card-" + (i + 1));
     let yy = y + 0.16;
-    if (c.num) { txt(s, String(c.num), { x: x + 0.25, y: yy, w: 0.8, h: 0.32, fontSize: 15, bold: true, fontFace: HEAD, color: dark ? C.accent6 : C.accent1 }); yy += 0.34; }
+    if (c.num) { txt(s, String(c.num), { x: x + 0.25, y: yy, w: W - 0.5, h: 0.32, fontSize: 15, bold: true, fontFace: HEAD, color: dark ? C.accent6 : C.accent1 }); yy += 0.34; }
     txt(s, c.title || "", { x: x + 0.25, y: yy, w: W - 0.5, h: 0.32, fontSize: 15, bold: true, color: dark ? C.accent6 : c.num ? C.text1 : C.accent1, wrap: true });
     yy += 0.38;
     if (c.body) txt(s, c.body, { x: x + 0.25, y: yy, w: W - 0.5, h: 0.6, fontSize: 12, color: dark ? C.background1 : C.text1, wrap: true, lineSpacingMultiple: 1.1 });
