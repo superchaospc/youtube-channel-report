@@ -16,7 +16,8 @@
 - **抓数据**：频道的订阅、总播放、建号日期和外链。每条长视频、每条 Shorts 的**精确播放量**和**发布日期**，不是 “2.1M views”“10 months ago” 这种约数。还会做完整性校验：长视频加 Shorts 的播放应该约等于频道总播放。
 - **算收入**：长视频按 RPM 算，Shorts 单独按每千次播放的价格算。公开过收入的频道可以**反推 RPM**。站外打赏（Buy Me a Coffee 等）按分档估算，再扣掉平台费和支付手续费。汇率自动获取。
 - **出结论**：累计收入、平均每月、平均每条（同时给中位数），播放最高的 10 条视频各赚多少，最受欢迎的题材和拍得最多的题材，每月发了多少条、最近 90 天快了还是慢了，以及多平台的账号矩阵。
-- **出 PPT**：16:9，自带 19 种版式，包括数据页（KPI、表格、柱状图、题材对比）和叙述页（启示、卡片、对比面板、编号建议）。柱状图用形状画，在 PowerPoint、Keynote 和访达预览里都能正常显示。生成完自动用 Keynote 渲染成图片，用来检查排版。
+- **拍摄器材和拍摄方式**：扫描简介和评论里的器材线索，下载 YouTube 自动截取的视频帧拼成联系表，读取分辨率和帧率。AI 逐帧统计拍摄方式（手持自拍、固定机位、第一视角……），再结合证据推断器材，每一条都标明是“有证据”还是“推断”。
+- **出 PPT**：16:9，自带 20 种版式，包括数据页（KPI、表格、柱状图、题材对比）和叙述页（启示、卡片、对比面板、编号建议）。柱状图用形状画，在 PowerPoint、Keynote 和访达预览里都能正常显示。生成完自动用 Keynote 渲染成图片，用来检查排版。
 - **附带**：逐条视频的 CSV（含中文标题、题材、收入，用 Excel 打开不乱码），以及一份 `report.md` 摘要。
 
 ## 前置条件
@@ -59,6 +60,7 @@ S=~/.claude/skills/youtube-channel-report/scripts
 
 python3 $S/fetch_channel.py @handle --out WORK/data           # 抓一个频道：about.json / long.json / shorts.json
 python3 $S/social_stats.py --tiktok handle --bmc slug        # TikTok 粉丝数和 Buy Me a Coffee 支持者人数
+python3 $S/gear_scan.py WORK/data/handle --out WORK/gear     # 拍摄器材证据：简介、评论、截帧联系表、分辨率和帧率
 python3 $S/compute_report.py WORK/config.json                # 计算，输出 numbers.json、report.md、CSV、deck.json
 NODE_PATH=~/.cache/ycr-node/node_modules \
   node $S/build_deck.js WORK/out/deck.json WORK/报告.pptx    # 生成 PPT

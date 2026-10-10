@@ -4,10 +4,11 @@ description: >-
   Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report: exact per-video
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
   monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
-  each topic is filmed, upload cadence over time, and the creator's account matrix (sub-channels, TikTok, Instagram,
-  Buy Me a Coffee tips). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
+  each topic is filmed, upload cadence over time, the creator's account matrix (sub-channels, TikTok, Instagram,
+  Buy Me a Coffee tips), and how they film — shooting styles counted from frames plus the likely camera / mic
+  setup (拍摄器材, 用什么拍, 拍摄方式). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
   channel earns (赚了多少钱, 收入估算, 月入, 每个视频赚多少, RPM 多少, 反推 RPM), wants views without Shorts
-  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, or a 频道分析 PPT / 报告 /
+  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 报告 /
   数据统计 — even if they only paste a channel URL like youtube.com/@xxx and ask about money. Also use it to
   extend or restyle a report this skill made before. NOT for downloading videos or subtitles (yt-dlp-download),
   not for a single video's content summary, and not for comment-only keyword studies.
@@ -40,6 +41,14 @@ python3 $S/social_stats.py --tiktok <handle> --bmc <slug>
 ```
 
 Instagram 用 curl 抓不到，要用浏览器工具打开 `instagram.com/<handle>/`，读取 `og:description`（例如 “218K Followers, 97 Posts”）。数字写进 config 的 `accounts`。
+
+### 2b. 拍摄器材和拍摄方式（可选，用户问器材、或者报告要讲“怎么拍”时做）
+
+```bash
+python3 $S/gear_scan.py $W/data/<handle> --out $W/gear      # 本机被 YouTube 拦截时加 --proxy socks5://…
+```
+
+这个脚本会扫描简介和评论里的器材线索，下载截帧拼成联系表，并读取分辨率和帧率。然后**一张张看联系表**，逐帧统计拍摄方式（手持自拍 / 固定机位 / 第一视角 / 车载 / 别人帮忙拍），把结论写进 `gear.json`，再在 config 里加 `"gear": "gear.json"`。做法和写法要求见 `references/gear.md`。型号只能写“类似 X”，每一条都要标明是“有证据”还是“推断”。
 
 ### 3. 定 RPM
 
@@ -115,4 +124,5 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png            # macOS + Keynote；加 
 - `references/data-gotchas.md`：抓数据时的坑，包括 innertube 字段变化、被判定为机器人时的绕法、精确时间戳、Instagram/TikTok。
 - `references/rpm-and-income.md`：RPM 默认表、反推方法、Shorts、打赏手续费、汇率。
 - `references/config.md`：config 的全部字段。
-- `references/deck-json.md`：19 种页面类型和字段。
+- `references/deck-json.md`：20 种页面类型和字段。
+- `references/gear.md`：拍摄器材和拍摄方式怎么找证据、怎么归类、`gear.json` 的格式。

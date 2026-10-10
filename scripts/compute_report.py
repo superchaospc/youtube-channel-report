@@ -405,6 +405,12 @@ def main():
                               {"label": "总播放", "align": "right", "width": 0.11}, {"label": "代表作（播放最高的一条）", "align": "left", "width": 0.54}],
                   "rows": [[t["topic"], str(t["n"]), wan(t["avg"]), wan(t["total"], 0), t["best"]] for t in topics],
                   "font_size": 12, "row_h": 0.4, "note": "按平均播放从高到低排列。题材按视频标题人工归类，每条视频只归入一类。"})
+    gear = load_json(base, cfg.get("gear"), None)
+    if gear:
+        S.append({"type": "gear", "eyebrow": "拍摄器材", "title": gear.get("title", "拍摄器材与拍摄方式"), "bg": "alt",
+                  "frames": gear.get("frames"), "style": gear.get("style", []), "specs": gear.get("specs"), "items": gear.get("items", []),
+                  "summary": gear.get("summary"),
+                  "notes": "器材型号来自截帧画面、评论和视频技术参数的推断；标「有证据」的有评论或画面直接佐证。"})
     colors = ["accent", "accentLight", "blue", "lightBlue", "muted", "gray"]
     S.append({"type": "stacked_columns", "eyebrow": "更新频率", "title": f"{'各频道' if len(tchans) > 1 else ''}每个月发多少条", "bg": "alt",
               "series": [{"label": s, "color": colors[i % len(colors)]} for i, s in enumerate(freq["series"])],

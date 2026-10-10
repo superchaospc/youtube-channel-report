@@ -41,6 +41,7 @@
 | `stats4` | `tiles[{label,value,sub,dark}]` `bullets[]` |
 | `topic_bars` | `left/right{title,items[{label,value,text,highlight,bar}]}` `insight`。`bar:false` 表示这一项只显示文字，不画条，可用于并列项。 |
 | `stacked_columns` | `series[{label,color}]` `categories[]` `values[[每个类别下各系列的数值]]`。超过 14 个类别时，月份标签会自动缩写并隔几个显示一个。 |
+| `gear` | `frames` `style[{label,count}]` `specs` `items[{category,name,basis,level}]`（最多 5 条，level 填“有证据”或“推断”）、`summary` |
 | `three_cols` | `cols[{title,bullets[],dark}]`（最多 3 栏）、`banner` |
 
 ## 叙述页（按需要手动加）

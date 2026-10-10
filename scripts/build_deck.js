@@ -452,6 +452,35 @@ R.panels = (s, d) => {
   note(s, d.note, 6.3);
 };
 
+R.gear = (s, d) => {
+  // Left: shooting styles counted over sampled frames. Right: gear items with how sure we are.
+  const LW = 4.9, style = (d.style || []).slice(0, 6), total = d.frames || style.reduce((a, x) => a + x.count, 0) || 1;
+  const max = Math.max(...style.map((x) => x.count), 1);
+  txt(s, d.style_title || `拍摄方式（${total} 张截帧统计）`, { x: MX, y: 2.1, w: LW, h: 0.4, fontSize: 16, bold: true, color: C.text1 });
+  style.forEach((x, i) => {
+    const y = 2.6 + i * 0.52, bw = (x.count / max) * 1.4;
+    txt(s, x.label, { x: MX, y, w: 2.2, h: 0.46, fontSize: 13, color: C.text1, valign: "middle", wrap: true });
+    rect(s, MX + 2.25, y + 0.12, Math.max(bw, 0.04), 0.22, i === 0 ? C.accent1 : C.accent2, "style-bar-" + i);
+    txt(s, `${x.count} 张 · ${Math.round((x.count / total) * 100)}%`, { x: MX + 2.25 + bw + 0.1, y, w: LW - 2.35 - bw, h: 0.46, fontSize: 12, bold: true, color: C.text1, valign: "middle" });
+  });
+  if (d.specs) txt(s, "画质：" + d.specs, { x: MX, y: 2.6 + style.length * 0.52 + 0.1, w: LW, h: 0.5, fontSize: 12, color: C.text2, wrap: true });
+  const rx = MX + LW + 0.4, rw = CW - LW - 0.4, items = (d.items || []).slice(0, 5);
+  txt(s, d.items_title || "器材推断", { x: rx, y: 2.1, w: rw, h: 0.4, fontSize: 16, bold: true, color: C.text1 });
+  items.forEach((it, i) => {
+    const y = 2.6 + i * 0.68, sure = /证据|确认|confirmed/i.test(it.level || "");
+    box(s, rx, y, rw, 0.6, d.bg === "alt" ? C.background1 : C.background2, "gear-" + i);
+    txt(s, it.category || "", { x: rx + 0.2, y, w: 1.1, h: 0.6, fontSize: 12, bold: true, color: C.accent1, valign: "middle", wrap: true });
+    txt(s, it.name || "", { x: rx + 1.35, y: y + 0.05, w: rw - 2.3, h: 0.28, fontSize: 13, bold: true, color: C.text1 });
+    txt(s, it.basis || "", { x: rx + 1.35, y: y + 0.31, w: rw - 1.5, h: 0.26, fontSize: 11, color: C.text2 });
+    box(s, rx + rw - 0.85, y + 0.08, 0.7, 0.26, sure ? C.accent1 : C.accent2, "level-" + i);
+    txt(s, it.level || "推断", { x: rx + rw - 0.85, y: y + 0.08, w: 0.7, h: 0.26, fontSize: 11, bold: true, color: C.background1, align: "center", valign: "middle" });
+  });
+  if (d.summary) {
+    box(s, MX, 6.0, CW, 0.6, C.text1, "gear-summary");
+    txt(s, d.summary, { x: MX + 0.3, y: 6.0, w: CW - 0.6, h: 0.6, fontSize: 13, color: C.background1, valign: "middle", wrap: true });
+  } else note(s, d.note, 6.38);
+};
+
 // ---------------------------------------------------------------- build
 const hasSections = deck.slides.some((d) => d.section);
 let section = null;
