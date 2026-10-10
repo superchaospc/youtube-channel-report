@@ -116,6 +116,10 @@ def main():
         ch["shorts_views"] = sum(v["views"] for v in ch["shorts"])
         chans.append(ch)
     main = chans[0]
+    # Channels with "in_total": false (e.g. an older channel started years earlier) still get an
+    # account card and their own revenue slide, but stay out of totals, monthly and cadence,
+    # because dividing their lifetime revenue by this channel's months would inflate the average.
+    tchans = [ch for ch in chans if ch.get("in_total", True) or ch["main"]]
 
     # --- disclosure back-calculation (main channel)
     disc = cfg.get("disclosure")
@@ -152,7 +156,7 @@ def main():
                "platform_fee": tips.get("platform_fee", 0.05), "payment_pct": tips.get("payment_pct", 0.029),
                "payment_fixed": tips.get("payment_fixed", 0.30)}
 
-    total = sum(ch["usd"] for ch in chans) + (tip["net"] if tip else 0)
+    total = sum(ch["usd"] for ch in tchans) + (tip["net"] if tip else 0)
     start = d(cfg.get("period_start") or main["first_long"])
     months = months_between(start, as_of)
 
@@ -187,7 +191,7 @@ def main():
 
     # --- upload frequency
     series = []
-    for ch in chans:
+    for ch in tchans:
         series.append((f"{ch['label']}长视频", Counter(v["date"][:7] for v in ch["long"])))
         if ch["shorts"]:
             series.append((f"{ch['label']} Shorts", Counter(v["date"][:7] for v in ch["shorts"])))
@@ -207,9 +211,9 @@ def main():
         return r
     for ch in chans:
         ch["cadence"] = cadence(ch)
-    all_long = sum(len(ch["long"]) for ch in chans)
-    all_items = sum(len(ch["long"]) + len(ch["shorts"]) for ch in chans)
-    first_any = min(x for ch in chans for x in (ch["first_long"], ch["first_short"]) if x)
+    all_long = sum(len(ch["long"]) for ch in tchans)
+    all_items = sum(len(ch["long"]) + len(ch["shorts"]) for ch in tchans)
+    first_any = min(x for ch in tchans for x in (ch["first_long"], ch["first_short"]) if x)
     combined = {"long_per_month": all_long / months, "all_per_month": all_items / months_between(d(first_any), as_of)}
 
     # --- accounts
@@ -258,7 +262,8 @@ def main():
          f"汇率 1 USD = {rate:.4f} CNY（{rate_src}）。月均按 {start} 到 {as_of} 共 {months:.1f} 个月计算。", "",
          "| 收入来源 | 估算方法 | 美元 | 人民币 |", "|---|---|---|---|"]
     for ch in chans:
-        L.append(f"| {ch['label']}长视频 | {wan(ch['long_views'])}播放 × ${ch['rpm']} | {usd(ch['long_usd'])} | {cny(ch['long_usd'])} |")
+        flag = "" if ch in tchans else "（不计入合计）"
+        L.append(f"| {ch['label']}长视频{flag} | {wan(ch['long_views'])}播放 × ${ch['rpm']} | {usd(ch['long_usd'])} | {cny(ch['long_usd'])} |")
         if ch["shorts"]:
             L.append(f"| {ch['label']} Shorts | {wan(ch['shorts_views'])}播放 × ${ch['shorts_rpm']} | {usd(ch['shorts_usd'])} | {cny(ch['shorts_usd'])} |")
     if tip:
@@ -287,7 +292,7 @@ def main():
               "subtitle": "账号矩阵、收入估算、爆款视频、题材和更新频率" if len(accounts) > 1 else "收入估算、爆款视频、题材和更新频率",
               "kpi": {"label": "收入估算 · 平均每月", "value": cnyw(total / months), "sub": f"累计约 {cnyw(total, 0)}"},
               "meta": f"{handles} · 数据截至 {as_of}"})
-    if len(chans) > 1 or tip:
+    if len(tchans) > 1 or tip:
         f0 = {"title": f"钱主要来自{main['label']}", "text": f"{main['label']}占全部收入的 {main['usd'] / total:.0%}，长视频是收入大头。"}
     else:
         f0 = {"title": "长视频是收入大头", "text": f"长视频 {len(main['long'])} 条贡献了 {main['long_usd'] / total:.0%} 的收入；"
@@ -301,7 +306,7 @@ def main():
               "tiles": [{"value": wan(fans) if fans else wan(main['about']['subscribers']), "label": "全平台粉丝" if len(accounts) > 1 else "订阅", "desc": "所有账号粉丝相加" if len(accounts) > 1 else main["about"].get("title"), "dark": True},
                         {"value": f"${main['rpm']}", "label": f"{main['label']}长视频 RPM", "desc": "用公开收入反推" if back else "估算值"},
                         {"value": cnyw(per_video), "label": "每条长视频", "desc": f"{len(vids)} 条长视频平均"},
-                        {"value": f"{combined['long_per_month'] / 4.345:.1f} 条", "label": "每周长视频", "desc": "所有频道合计" if len(chans) > 1 else "平均更新频率"}],
+                        {"value": f"{combined['long_per_month'] / 4.345:.1f} 条", "label": "每周长视频", "desc": "所有频道合计" if len(tchans) > 1 else "平均更新频率"}],
               "findings": findings})
     if len(accounts) > 1:
         S.append({"type": "accounts", "eyebrow": "账号矩阵", "title": f"{len(accounts)} 个账号，全平台约 {wan(fans)}粉丝", "bg": "alt",
@@ -333,7 +338,8 @@ def main():
                   "total": {"label": "合计", "value": f"{usd(ch['usd'])} ≈ {cnyw(ch['usd'])}"},
                   "list_title": "播放最高的 3 条",
                   "list": [{"title": titles_zh.get(v["id"]) or short_title(v["title"], 22), "value": f"{wan(v['views'])}播放\n{cny(rev(v, ch))}"} for v in top3],
-                  "side_note": f"{len(ch['shorts'])} 条 Shorts 共 {wan(ch['shorts_views'])}播放，按每千次 ${ch['shorts_rpm']} 计入。" if ch["shorts"] else ""})
+                  "side_note": (f"{len(ch['shorts'])} 条 Shorts 共 {wan(ch['shorts_views'])}播放，按每千次 ${ch['shorts_rpm']} 计入。" if ch["shorts"] else "")
+                  + ("" if ch in tchans else f"这个频道 {ch['first_long'][:7]} 就开始发视频，周期和{main['label']}不同，单独列出，不计入总收入和月均。")})
     if tip:
         tiers_rows = [[f"${a:g}", f"{p:.0%}", f"${a * p:.2f}"] for a, p in tip["tiers"]] + [["加权平均", "100%", f"${tip['avg']:.2f}"]]
         S.append({"type": "tips", "eyebrow": "站外打赏", "title": f"{tip['platform']} 打赏：到手约 {cnyw(tip['net'])}",
@@ -346,7 +352,7 @@ def main():
                   "note": "支持者人数取自公开页面。按每人打赏一次估算，打赏多次的人会让实际金额更高；分档比例是假设值。"})
     parts = []
     palette = ["accent", "accentLight", "blue", "lightBlue", "muted"]
-    for ch in chans:
+    for ch in tchans:
         if ch["main"] and ch["shorts"]:
             parts.append([f"{ch['label']}长视频", f"{wan(ch['long_views'])}播放 × ${ch['rpm']}", ch["long_usd"]])
             parts.append([f"{ch['label']} Shorts", f"{wan(ch['shorts_views'])}播放 × ${ch['shorts_rpm']}", ch["shorts_usd"]])
@@ -360,8 +366,9 @@ def main():
                           {"label": "人民币", "align": "right", "width": 0.18}, {"label": "占比", "align": "right", "width": 0.15}],
               "rows": [[p[0], p[1], usd(p[2]), cny(p[2]), f"{p[2] / total:.1%}"] for p in parts] + [["合计", "", usd(total), cny(total), "100%"]],
               "total_row": True, "font_size": 15, "row_h": 0.48,
-              "note": "会员和 Super Thanks 已包含在长视频的 RPM 估算里；没有公开收入数据的平台不计入。"})
-    items = [{"label": c["label"] if not c["main"] else c["label"], "value": c["usd"]} for c in chans] + ([{"label": tip["platform"], "value": tip["net"]}] if tip else [])
+              "note": "会员和 Super Thanks 已包含在长视频的 RPM 估算里；没有公开收入数据的平台不计入。"
+              + "".join(f"{c['label']}（约 {cnyw(c['usd'])}）单独列出，不计入合计。" for c in chans if c not in tchans)})
+    items = [{"label": c["label"] if not c["main"] else c["label"], "value": c["usd"]} for c in tchans] + ([{"label": tip["platform"], "value": tip["net"]}] if tip else [])
     items.sort(key=lambda x: -x["value"])
     S.append({"type": "monthly", "eyebrow": "平均每月", "title": f"平均每月约 {cnyw(total / months)}", "bg": "alt",
               "total": {"label": "全部收入 · 平均每月", "value": cny(total / months), "sub": f"{usd(total / months)} / 月", "caption": f"累计 {cny(total)} ÷ {months:.1f} 个月"},
@@ -399,12 +406,12 @@ def main():
                   "rows": [[t["topic"], str(t["n"]), wan(t["avg"]), wan(t["total"], 0), t["best"]] for t in topics],
                   "font_size": 12, "row_h": 0.4, "note": "按平均播放从高到低排列。题材按视频标题人工归类，每条视频只归入一类。"})
     colors = ["accent", "accentLight", "blue", "lightBlue", "muted", "gray"]
-    S.append({"type": "stacked_columns", "eyebrow": "更新频率", "title": f"{'各频道' if len(chans) > 1 else ''}每个月发多少条", "bg": "alt",
+    S.append({"type": "stacked_columns", "eyebrow": "更新频率", "title": f"{'各频道' if len(tchans) > 1 else ''}每个月发多少条", "bg": "alt",
               "series": [{"label": s, "color": colors[i % len(colors)]} for i, s in enumerate(freq["series"])],
               "categories": [m.replace("-", ".") for m in freq["months"]], "values": freq["values"],
               "note": f"柱子上方是当月合计条数，柱子里是各类条数（只标 2 条以上的）。{as_of.strftime('%Y-%m')} 只统计到 {as_of.day} 日。"})
     cols = []
-    if len(chans) == 1:
+    if len(tchans) == 1:
         c = main["cadence"]
         lb = [f"共 {c['long_n']} 条，每月 {c['long_per_month']:.1f} 条（约每周 {c['long_per_month'] / 4.345:.1f} 条）",
               f"最近 90 天：每月 {c['long_recent_per_month']:.1f} 条", f"第一条：{main['first_long']}"]
@@ -415,7 +422,7 @@ def main():
         busiest = max(zip(freq["months"], [r[0] for r in freq["values"]]), key=lambda x: x[1])
         cols.append({"title": "节奏特点", "dark": True, "bullets": [f"长视频最多的月份：{busiest[0]}（{busiest[1]} 条）",
                      "最近 90 天" + ("提速了" if c["long_recent_per_month"] > c["long_per_month"] * 1.1 else "放慢了" if c["long_recent_per_month"] < c["long_per_month"] * 0.9 else "和平均差不多")]})
-    for ch in (chans[:2] if len(chans) > 1 else []):
+    for ch in (tchans[:2] if len(tchans) > 1 else []):
         c = ch["cadence"]
         b = []
         if "long_per_month" in c:
@@ -425,7 +432,7 @@ def main():
             fm, fn = c["shorts_first_month"]
             b.append(f"Shorts {c['shorts_n']} 条，每月 {c['shorts_per_month']:.1f} 条（{fm} 起步月 {fn} 条）")
         cols.append({"title": f"{ch['label']} {ch['name']}", "bullets": b})
-    if len(chans) > 1:
+    if len(tchans) > 1:
         cols.append({"title": "所有频道合计", "dark": True, "bullets": [f"长视频 {all_long} 条，平均每月 {combined['long_per_month']:.1f} 条（约每周 {combined['long_per_month'] / 4.345:.1f} 条）",
                                                                    f"加上 Shorts 共 {all_items} 条，平均每月约 {combined['all_per_month']:.0f} 条"]})
     S.append({"type": "three_cols", "eyebrow": "更新频率", "title": "更新节奏：从起步到现在", "cols": cols})
