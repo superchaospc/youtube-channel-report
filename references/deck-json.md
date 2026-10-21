@@ -28,7 +28,7 @@
 
 | type | 字段 |
 |---|---|
-| `cover` | `eyebrow` `title` `subtitle` `kpi{label,value,sub}` `meta` |
+| `cover` | `eyebrow` `title` `title_size`（可选。默认自动选能让每行放下的最大字号，54→32；用 `\n` 手动分行）`subtitle` `kpi{label,value,sub}` `meta` |
 | `kpis` | `tiles[{value,label,desc,dark}]`（最多 4 个）、`findings[{title,text}]`（最多 3 个） |
 | `accounts` | `accounts[{platform,name,value,unit,detail,highlight}]`（最多 5 个） |
 | `disclosure` | `amount` `amount_sub` `caption` `parts_title` `parts[]`（最多 4 条）、`parts_note` |
@@ -81,9 +81,33 @@
 **`rows`**：带编号的横条列表（最多 6 行），每行显示 名称 / 说明 / 右侧标签，适合“收入来源构成”这类页面。
 `rows[{name,desc,tag}]`
 
+**`images`**：1–3 张图片并排（`layout: "stack"` 时上下排），按比例缩放放进格子里，不会变形。适合缩略图前后对比、截帧联系表、后台截图。可加顶部深色 `statement` 和底部 `banner`。
+`images[{path,caption,ratio,accent}]`：`path` 相对于 deck.json 所在目录；`ratio` 是宽÷高（不填按 16:9），要和图片实际比例一致，否则会被拉伸；`accent: true` 时标题用砖红色。
+
+```json
+{"type": "images", "eyebrow": "缩略图", "title": "从各写各的，到统一模板",
+ "statement": "改版后 5 张缩略图用同一套模板：2–3 个大字 + 夜景 + 落魄姿态",
+ "images": [{"path": "../thumbs_old.jpg", "caption": "改版前 16 条", "ratio": 1.778},
+            {"path": "../thumbs_new_grid.jpg", "caption": "改版后 5 条", "ratio": 1.778, "accent": true}]}
+```
+
 ## 写作和排版要点
 
 - 标题要能概括结论，比如“累计约 ¥118 万，平均每月约 ¥11.5 万”，而不是只写“收入”。
 - 结论要带数字或例子。是假设或人工判断的，写进 `note`。
 - 文字放不下就改短，不要缩小字号。`build_deck.js` 打印的 WARN 指的是哪一页、哪段文字。
 - 生成后一定要用 `render_check.sh` 渲染出图片，用眼睛检查一遍。
+- 渲染检查用的是 Keynote：占位符里放不下的文字会被 Keynote 悄悄缩小，PowerPoint 不会，会直接溢出错位（用户在 PowerPoint 里遇到过封面错位）。所以 WARN 一条都不能放过，标题必须一行放得下。
+
+## 竖版（9:16）专用字段
+
+`build_deck_portrait.js` 用同一份 deck.json 生成竖屏版，每种页面都有对应的竖排版式。横版会忽略下面这些字段：
+
+| 字段 | 作用 |
+|---|---|
+| `portrait` | 对象：只在竖版里覆盖该页的字段，最常用来删表格列，例如 `{"columns": [...], "rows": [...], "bold_col": 3}`。填 `false` 表示这一页不进竖版。 |
+| `title_portrait` | 竖版标题，可用 `\n` 手动断行。不填时在中文标点（：，、—）处自动断成两行。 |
+| `title_size_portrait` | 只用于封面：竖版封面标题字号。 |
+| `font_size_portrait` / `row_h_portrait` | 只用于 `table`：竖版表格字号和最小行高（默认 15–16pt、0.56 英寸，短表格会自动拉高铺满）。 |
+
+竖版每页大约放 15 个汉字一行（30pt 标题）或 26 个汉字一行（15pt 正文）。4 列以上、单元格文字长的表格，竖版里要删列。

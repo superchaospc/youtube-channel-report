@@ -1,14 +1,14 @@
 ---
 name: youtube-channel-report
 description: >-
-  Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report: exact per-video
+  Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report in two formats — a 16:9 landscape deck and a 9:16 portrait (竖屏/竖版) deck for vertical screens and phones: exact per-video
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
   monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
   each topic is filmed, upload cadence over time, the creator's account matrix (sub-channels, TikTok, Instagram,
   Buy Me a Coffee tips), and how they film — shooting styles counted from frames plus the likely camera / mic
   setup (拍摄器材, 用什么拍, 拍摄方式). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
   channel earns (赚了多少钱, 收入估算, 月入, 每个视频赚多少, RPM 多少, 反推 RPM), wants views without Shorts
-  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 报告 /
+  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 竖屏 PPT / 报告 /
   数据统计 — even if they only paste a channel URL like youtube.com/@xxx and ask about money. Also use it to
   extend or restyle a report this skill made before. NOT for downloading videos or subtitles (yt-dlp-download),
   not for a single video's content summary, and not for comment-only keyword studies.
@@ -72,6 +72,8 @@ python3 $S/gear_scan.py $W/data/<handle> --out $W/gear      # 本机被 YouTube 
 {"title": "XX 频道分析", "channels": [{"data": "data/handle", "label": "主频道", "rpm": 5}]}
 ```
 
+**只有一个频道时不要叫“主频道”**（用户明确要求）：`label` 写 `"YouTube"`；跑完计算后把 `deck.json` 里的“主频道长视频”改成“长视频”、“YouTube 主频道”改成“YouTube 频道”、“主频道平均每条”改成“平均每条”，其余“主频道”也一并改掉，最后 `grep 主频道 out/deck.json` 确认一处都不剩。有副频道时才用“主频道 / 副频道”。
+
 ```bash
 python3 $S/compute_report.py $W/config.json
 ```
@@ -90,25 +92,45 @@ python3 $S/compute_report.py $W/config.json
 
 各种页面类型和字段见 `references/deck-json.md`。写结论时要给出证据，比如数字、代表视频、评论里反复出现的说法。没有数据支撑的建议，要标明是建议。
 
-### 7. 生成 PPT 并检查
+### 7. 生成 PPT 并检查（横版、竖版各一份）
+
+**每次都交付两份 PPT**（用户要求）：16:9 横版，和 9:16 竖版（竖屏播放、手机上看）。两份用同一份 `deck.json`，改内容只改 deck.json，然后两份一起重新生成，不要只更新其中一份。
 
 ```bash
-npm install --prefix ~/.cache/ycr-node pptxgenjs@3.12.0          # 第一次需要
-NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck.js $W/out/deck.json "$W/<标题>.pptx"
-$S/render_check.sh "$W/<标题>.pptx" $W/png            # macOS + Keynote；加 --pdf 同时导出 PDF
+$S/build_decks.sh $W/out/deck.json $W "<标题>"
 ```
 
-- `build_deck.js` 会打印 `WARN … may not fit`，提示哪些文字可能放不下。把对应文字改短，或者换个字段放。
-- 一定要看 `render_check.sh` 生成的联系表（`sheet-N.png`），检查有没有文字溢出、重叠、折行压到下一行。改完只需要重渲染、复查改过的页。
+这一条命令会依次：
+1. 第一次运行时自动装 pptxgenjs；
+2. 用 `build_deck.js` 生成横版 `<标题>.pptx`；
+3. 用 `build_deck_portrait.js` 生成竖版 `<标题>-竖屏.pptx`（7.5×13.33 英寸，每种页面都重新上下排版，字号放大，表格、卡片、图表自动撑满屏幕）；
+4. 用 Keynote 把两份都渲染成图片（`png/`、`png-portrait/`），并各导出一份 PDF。
+
+只想单独重做某一份时：
+
+```bash
+NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck.js $W/out/deck.json "$W/<标题>.pptx"
+NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck_portrait.js $W/out/deck.json "$W/<标题>-竖屏.pptx"
+$S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
+```
+
+检查要求：
+- 两个脚本都会打印 `WARN … may not fit` / `content runs to …`，提示哪页文字放不下或超出底部。把对应文字改短，或者换个字段放。
+- 两份都要看渲染图（`sheet-N.png`，或把 png 拼成联系表），检查文字溢出、重叠、折行压到下一行，竖版再看页面下方有没有大片空白。改完只需重渲染、复查改过的页。
+- **竖版专用字段**（写在 deck.json 的对应页上，横版会忽略）：
+  - `"portrait": {...}`：只在竖版里覆盖该页的字段。4 列以上的宽表格在竖屏里太挤，用它只保留关键列，例如 `"portrait": {"columns": [...], "rows": [...]}` 去掉美元列、代表标题列。
+  - `"portrait": false`：这一页不进竖版。
+  - `title_portrait`：手动给竖版标题断行（`\n`）。默认会在中文标点（：，、—）处自动断行，避免末行只剩一个字；数字里的英文逗号不会被断开。
+  - 封面 `title_size_portrait`：竖版封面标题字号，不填时自动选能放下的最大字号。
 
 ### 8. 交付
 
-- 把 `.pptx`、CSV 和 `report.md` 放在工作目录里，然后用 `open -R <pptx>` 在 Finder 里定位。
+- 工作目录里放：横版 `.pptx` + PDF、竖版 `-竖屏.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
   1. 核心数字：累计、月均、每条，以及主频道的 RPM。
   2. 用了哪些假设：RPM、汇率、计算月均的起点、哪些平台没算进收入。
-  3. 加了哪些提纲以外的页面。
-- 要发给别人时，建议导出 PDF（加 `--pdf`）。PPT 用的是 Mac 字体（宋体/苹方），在 Windows 上打开会被替换成别的字体。
+  3. 加了哪些提纲以外的页面；竖版里删掉了哪些表格列。
+- 要发给别人时，发 PDF。PPT 用的是 Mac 字体（宋体/苹方），在 Windows 上打开会被替换成别的字体。
 
 ## 口径（每次都一样，别临时改）
 

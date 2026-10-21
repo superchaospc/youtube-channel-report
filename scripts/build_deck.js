@@ -58,7 +58,6 @@ pres.defineSlideMaster({
   background: { color: C.background1 },
   objects: [
     { placeholder: { options: { name: "eyebrow", type: "body", x: MX, y: 0.889, w: CW, h: 0.4, fontFace: BODY, fontSize: 16, bold: true, color: C.accent1, charSpacing: 2, margin: 0, valign: "top" }, text: "" } },
-    { placeholder: { options: { name: "title", type: "title", x: MX, y: 2.4, w: 7.6, h: 1.2, fontFace: HEAD, fontSize: 54, bold: true, color: C.text1, margin: 0, valign: "bottom", align: "left" }, text: "" } },
   ],
 });
 
@@ -92,7 +91,16 @@ const R = {};
 
 R.cover = (s, d) => {
   s.addText(d.eyebrow || "", { placeholder: "eyebrow" });
-  s.addText(d.title || "", { placeholder: "title" });
+  // The cover title is a plain text box, not the title placeholder: pptxgenjs drops size and position
+  // overrides on placeholders, and Keynote silently shrinks overflowing placeholder text while
+  // PowerPoint does not, so a long title looked fine in the render check but spilled in PowerPoint.
+  // The size is the largest that fits every line on one line (or title_size), bottom-aligned above the subtitle.
+  const lines = String(d.title || "").split("\n"), TW = 7.6;
+  const fits = (sz) => lines.every((l) => widthPt(l, sz) <= TW * 72 * 0.98);
+  const size = d.title_size || [54, 48, 44, 40, 36, 32].find(fits) || 32;
+  if (!fits(size)) warnings.push(`slide ${slideNo}: cover title line too wide at ${size}pt`);
+  const th = (lines.length * size * 1.2) / 72;
+  txt(s, d.title || "", { x: MX, y: 3.6 - th, w: TW, h: th, fontSize: size, bold: true, fontFace: HEAD, color: C.text1, valign: "bottom", wrap: true });
   if (d.subtitle) txt(s, d.subtitle, { x: MX, y: 3.75, w: 7.2, h: 0.9, fontSize: 20, color: C.text2, wrap: true, lineSpacingMultiple: 1.2 });
   if (d.kpi) {
     box(s, 8.75, 2.45, 3.695, 2.4, C.text1, "key-figure");
@@ -438,14 +446,14 @@ R.panels = (s, d) => {
   const HW = (CW - GAP) / 2;
   (d.panels || []).slice(0, 2).forEach((p, i) => {
     const x = MX + i * (HW + GAP), y = 2.15, dark = !!p.dark;
-    box(s, x, y, HW, 2.55, dark ? C.text1 : C.background2, "panel-" + (i + 1));
+    box(s, x, y, HW, 2.55, dark ? C.text1 : d.bg === "alt" ? C.background1 : C.background2, "panel-" + (i + 1));
     txt(s, p.title || "", { x: x + 0.35, y: y + 0.25, w: HW - 0.7, h: 0.4, fontSize: 16, bold: true, color: dark ? C.accent6 : C.accent1 });
     txt(s, p.big || "", { x: x + 0.35, y: y + 0.75, w: HW - 0.7, h: 0.5, fontSize: 24, bold: true, fontFace: HEAD, color: dark ? C.background1 : C.text1, valign: "middle" });
     txt(s, p.line || "", { x: x + 0.35, y: y + 1.35, w: HW - 0.7, h: 0.4, fontSize: 15, bold: true, color: dark ? C.background1 : C.text1, wrap: true });
     txt(s, p.sub || "", { x: x + 0.35, y: y + 1.85, w: HW - 0.7, h: 0.5, fontSize: 13, color: dark ? C.accent4 : C.text2, wrap: true });
   });
   if (d.box) {
-    box(s, MX, 4.95, CW, 1.25, C.background2, "panel-box");
+    box(s, MX, 4.95, CW, 1.25, d.bg === "alt" ? C.background1 : C.background2, "panel-box");
     txt(s, d.box.title || "", { x: MX + 0.35, y: 5.05, w: 3, h: 0.35, fontSize: 14, bold: true, color: C.accent1 });
     txt(s, d.box.text || "", { x: MX + 0.35, y: 5.4, w: CW - 0.7, h: 0.7, fontSize: 14, color: C.text1, wrap: true });
   }
@@ -478,6 +486,33 @@ R.gear = (s, d) => {
   if (d.summary) {
     box(s, MX, 6.0, CW, 0.6, C.text1, "gear-summary");
     txt(s, d.summary, { x: MX + 0.3, y: 6.0, w: CW - 0.6, h: 0.6, fontSize: 13, color: C.background1, valign: "middle", wrap: true });
+  } else note(s, d.note, 6.38);
+};
+
+R.images = (s, d) => {
+  // 1–3 images side by side (or stacked with layout "stack"), each fitted into its slot without distortion.
+  let top = 2.1;
+  if (d.statement) {
+    box(s, MX, 2.05, CW, 0.62, C.text1, "statement");
+    txt(s, d.statement, { x: MX + 0.3, y: 2.05, w: CW - 0.6, h: 0.62, fontSize: 14, bold: true, color: C.background1, valign: "middle", wrap: true });
+    top = 2.82;
+  }
+  const imgs = (d.images || []).slice(0, 3), n = Math.max(imgs.length, 1), stack = d.layout === "stack";
+  const bottom = d.banner ? 5.85 : 6.3, capH = 0.34, g = 0.25;
+  const slotW = stack ? CW : (CW - (n - 1) * g) / n, slotH = stack ? (bottom - top - (n - 1) * 0.12) / n : bottom - top;
+  const base = path.dirname(path.resolve(deckPath));
+  imgs.forEach((im, i) => {
+    const sx = stack ? MX : MX + i * (slotW + g), sy = stack ? top + i * (slotH + 0.12) : top;
+    const availH = slotH - (im.caption ? capH : 0), r = im.ratio || 16 / 9;
+    let w = slotW, h = w / r;
+    if (h > availH) { h = availH; w = h * r; }
+    const x = sx + (slotW - w) / 2;
+    if (im.caption) txt(s, im.caption, { x: sx, y: sy, w: slotW, h: capH - 0.04, fontSize: 13, bold: true, color: im.accent ? C.accent1 : C.text1, align: stack ? "left" : "center", valign: "middle" });
+    s.addImage({ path: path.resolve(base, im.path), x, y: sy + (im.caption ? capH : 0), w, h, objectName: "image-" + (i + 1) });
+  });
+  if (d.banner) {
+    box(s, MX, 5.98, CW, 0.62, d.bg === "alt" ? C.background1 : C.background2, "banner");
+    txt(s, d.banner, { x: MX + 0.3, y: 5.98, w: CW - 0.6, h: 0.62, fontSize: 13, color: C.text1, valign: "middle", wrap: true });
   } else note(s, d.note, 6.38);
 };
 

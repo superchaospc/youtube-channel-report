@@ -39,17 +39,23 @@ if [ "$pdf" = "--pdf" ]; then
   echo "pdf: $pdfout"
 fi
 
-# Contact sheets, 6 slides each (needs Pillow; skipped quietly without it).
+# Contact sheets, 6 landscape or 8 portrait slides each (needs Pillow; skipped quietly without it).
 "${PYTHON:-python3}" - "$out" <<'EOF' || echo "(no Pillow: open the PNGs directly)"
 import glob, sys
 from PIL import Image
 fs = sorted(f for f in glob.glob(sys.argv[1] + "/*.png") if "/sheet-" not in f)
-W, H = 900, 506
-for g in range(0, len(fs), 6):
-    sheet = Image.new("RGB", (W * 2 + 30, (H + 20) * 3 + 10), "#888")
-    for i, f in enumerate(fs[g:g + 6]):
-        sheet.paste(Image.open(f).convert("RGB").resize((W, H)), (10 + (i % 2) * (W + 10), 10 + (i // 2) * (H + 20)))
-    p = f"{sys.argv[1]}/sheet-{g // 6 + 1}.png"
+# Keep the slide's own aspect ratio: 6 landscape slides as 2×3, or 8 portrait (9:16) slides as 4×2.
+w0, h0 = Image.open(fs[0]).size if fs else (16, 9)
+portrait = h0 > w0
+cols, rows = (4, 2) if portrait else (2, 3)
+W = 440 if portrait else 900
+H = round(W * h0 / w0)
+per = cols * rows
+for g in range(0, len(fs), per):
+    sheet = Image.new("RGB", ((W + 10) * cols + 10, (H + 20) * rows + 10), "#888")
+    for i, f in enumerate(fs[g:g + per]):
+        sheet.paste(Image.open(f).convert("RGB").resize((W, H)), (10 + (i % cols) * (W + 10), 10 + (i // cols) * (H + 20)))
+    p = f"{sys.argv[1]}/sheet-{g // per + 1}.png"
     sheet.save(p)
     print(p)
 EOF
