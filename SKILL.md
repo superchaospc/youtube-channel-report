@@ -1,7 +1,7 @@
 ---
 name: youtube-channel-report
 description: >-
-  Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report in two formats — a 16:9 landscape deck and a 9:16 portrait (竖屏/竖版) deck for vertical screens and phones: exact per-video
+  Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report in three files — a 16:9 landscape deck, a 9:16 portrait (竖屏/竖版) reading deck for phones, and a 9:16 portrait video deck that keeps the whole bottom free for the user's own 16:9 landscape facecam (视频制作版): exact per-video
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
   monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
   each topic is filmed, upload cadence over time, the creator's account matrix (sub-channels, TikTok, Instagram,
@@ -50,6 +50,16 @@ python3 $S/gear_scan.py $W/data/<handle> --out $W/gear      # 本机被 YouTube 
 
 这个脚本会扫描简介和评论里的器材线索，下载截帧拼成联系表，并读取分辨率和帧率。然后**一张张看联系表**，逐帧统计拍摄方式（手持自拍 / 固定机位 / 第一视角 / 车载 / 别人帮忙拍），把结论写进 `gear.json`，再在 config 里加 `"gear": "gear.json"`。做法和写法要求见 `references/gear.md`。型号只能写“类似 X”，每一条都要标明是“有证据”还是“推断”。
 
+### 2c. 多人协作分工（出镜、掌镜、故事核心不是同一个人时必做）
+
+家庭、情侣、搭档类频道，用户最关心**分工**：谁出镜、谁拍、视频围着谁转，和单人自拍有什么不同。这时分工是报告主线（用户要求，2026-10-22）：
+
+```bash
+python3 $S/frame_sample.py $W/data/<handle> --out $W/collab --every 20
+```
+
+每 20 秒抽一帧拼联系表，逐帧记录画面里有谁、主角出镜时谁在拍，再用字幕统计旁白提到每个人的次数，写进 `collab/roles.json`，然后加一组“家庭协作”页面。和单人频道的对比，数据要取之前报告的 `gear.json`。做法和页面见 `references/collab.md`。
+
 ### 3. 定 RPM
 
 优先级如下：
@@ -90,11 +100,22 @@ python3 $S/compute_report.py $W/config.json
 
 `deck.json` 是一个页面列表，可以直接编辑：改标题和结论、删页、调顺序，或者插入自定义页。常见的自定义页有“给我们的启示”、“哪些人可以拍”、“还可以拍哪些题材”、“如何开始”、“开通 YPP 的门槛”、“起步建议”。用户给了提纲时，按提纲的顺序排。
 
-各种页面类型和字段见 `references/deck-json.md`。写结论时要给出证据，比如数字、代表视频、评论里反复出现的说法。没有数据支撑的建议，要标明是建议。
+**人物页**（用户要求，2026-10-22）：以出镜人为核心的频道（个人或家庭 vlog），在“一页看懂”后面加两页 `cards`：“她/他是谁”（`statement` 写网名、年龄、哪里人、几年级或职业；6 张卡片写性格和特点）和“家庭成员”（每位成员一张卡片：年龄、职业、在视频里做什么）。每一条都要出自视频简介、视频内容或高赞评论，卡片的 `note` 写出处。地域只写到省或城市，不写就读学校、详细地址、家人真名、离婚原因这类隐私，出镜人是未成年人时尤其注意。横版每张卡片的 `body` 控制在约 20 个汉字，否则 3×2 排不下。
 
-### 7. 生成 PPT 并检查（横版、竖版各一份）
+各种页面类型和字段见 `references/deck-json.md`。
 
-**每次都交付两份 PPT**（用户要求）：16:9 横版，和 9:16 竖版（竖屏播放、手机上看）。两份用同一份 `deck.json`，改内容只改 deck.json，然后两份一起重新生成，不要只更新其中一份。
+**抖音 / 小红书合规**（用户要求）：竖版会发到抖音和小红书，deck.json 里所有文字都不能出现站外平台名（YouTube 写成“油管”）、@handle 和链接、导流 / 引流、翻墙、收益承诺（“赚了多少”写成“收益估算”）、极限词、未成年人家庭隐私、募捐。封面写明“收益为估算，不构成收益承诺”。`build_decks.sh` 会先跑 `compliance_check.py`，有命中就改到 clean 再交付。规则和改法见 `references/compliance.md`。
+
+写结论时要给出证据，比如数字、代表视频、评论里反复出现的说法。没有数据支撑的建议，要标明是建议。
+
+### 7. 生成 PPT 并检查（横版 + 竖屏阅读版 + 竖屏视频版）
+
+**每分析一个频道，都交付三份 PPT**（用户要求，2026-10-22 起，固定规矩）：
+1. 16:9 **横版**；
+2. 9:16 **竖屏阅读版**：手机上看，不留窗口；
+3. 9:16 **竖屏视频版**：用户录讲解视频用，底部整条留给 16:9 横屏自拍画面。
+
+用户只说“做个 PPT”“出报告”，或者没提格式，也要三份一起交，不要只做其中一份，也不要先问要哪种。三份用同一份 `deck.json`，改内容只改 deck.json，然后三份一起重新生成，不要只更新其中一份。
 
 ```bash
 $S/build_decks.sh $W/out/deck.json $W "<标题>"
@@ -103,29 +124,38 @@ $S/build_decks.sh $W/out/deck.json $W "<标题>"
 这一条命令会依次：
 1. 第一次运行时自动装 pptxgenjs；
 2. 用 `build_deck.js` 生成横版 `<标题>.pptx`；
-3. 用 `build_deck_portrait.js` 生成竖版 `<标题>-竖屏.pptx`（7.5×13.33 英寸，每种页面都重新上下排版，字号放大，表格、卡片、图表自动撑满屏幕）；
-4. 用 Keynote 把两份都渲染成图片（`png/`、`png-portrait/`），并各导出一份 PDF。
+3. 用 `build_deck_portrait.js` 生成竖屏阅读版 `<标题>-竖屏阅读版.pptx`（7.5×13.33 英寸，每种页面都重新上下排版，字号放大，表格、卡片、图表自动撑满屏幕；带 `--no-facecam`，即使 deck.json 写了 facecam 也不留窗口）；
+4. 用 `build_deck_portrait.js --facecam` 生成竖屏视频版 `<标题>-竖屏视频版.pptx`（底部留 16:9 自拍区、顶部避开状态栏和灵动岛，见下文）；
+5. 用 Keynote 把三份都渲染成图片（`png/`、`png-portrait/`、`png-facecam/`），并各导出一份 PDF。
 
 只想单独重做某一份时：
 
 ```bash
 NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck.js $W/out/deck.json "$W/<标题>.pptx"
-NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck_portrait.js $W/out/deck.json "$W/<标题>-竖屏.pptx"
+NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck_portrait.js $W/out/deck.json "$W/<标题>-竖屏阅读版.pptx" --no-facecam
+NODE_PATH=~/.cache/ycr-node/node_modules node $S/build_deck_portrait.js $W/out/deck.json "$W/<标题>-竖屏视频版.pptx" --facecam
 $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 ```
 
 检查要求：
 - 两个脚本都会打印 `WARN … may not fit` / `content runs to …`，提示哪页文字放不下或超出底部。把对应文字改短，或者换个字段放。
-- 两份都要看渲染图（`sheet-N.png`，或把 png 拼成联系表），检查文字溢出、重叠、折行压到下一行，竖版再看页面下方有没有大片空白。改完只需重渲染、复查改过的页。
+- 三份都要看渲染图（`sheet-N.png`，或把 png 拼成联系表），检查文字溢出、重叠、折行压到下一行，竖版再看页面下方有没有大片空白，视频版看 `png-facecam/preview/preview-N.png`（底部叠了 16:9 自拍占位、顶部模拟了时间、灵动岛、信号和返回 / 搜索键、两侧标出抖音裁掉的部分），确认内容没压进自拍区、两侧不贴边。改完只需重渲染、复查改过的页。
 - **竖版专用字段**（写在 deck.json 的对应页上，横版会忽略）：
   - `"portrait": {...}`：只在竖版里覆盖该页的字段。4 列以上的宽表格在竖屏里太挤，用它只保留关键列，例如 `"portrait": {"columns": [...], "rows": [...]}` 去掉美元列、代表标题列。
   - `"portrait": false`：这一页不进竖版。
   - `title_portrait`：手动给竖版标题断行（`\n`）。默认会在中文标点（：，、—）处自动断行，避免末行只剩一个字；数字里的英文逗号不会被断开。
+  - **视频版版式**（用户要求，2026-10-22 改）：用户把自己的 **16:9 横屏自拍**整条放在竖屏底部（2026-10-22 试过 21:9，用户最后定为 16:9），所以视频版：
+    - **底部完全空出**：整宽 × 4.22 英寸（约下 32%，`meta.facecam_ratio` 可改比例），不放任何内容，页脚和页码也去掉，小字说明移进演讲者备注。
+    - **页边距加大**：抖音按高度铺满会裁掉左右各约 0.37 英寸，右侧还有点赞列，所以左右边距 0.85 英寸（阅读版仍是 0.5），标题从 1.62 英寸往下排（见下一条）。
+    - **顶部**：手机状态栏（时间、灵动岛、信号、电池）占顶部约 0–0.92 英寸，**什么都不放**。下面一行左边是抖音返回箭头、右边是放大镜（中心距顶约 1.26 英寸），这一行**不要空着**（空着很怪，用户要求）：把 eyebrow 小标题当成导航栏标题，放在箭头和放大镜中间、水平居中；页面标题紧接着从 1.62 英寸开始。不加色条，不放频道名（用户试过后明确不要，2026-10-22）。
+    - **放不下就分页**：先按最小字号（约 86%）决定分几页，放不下的拆成同标题的续页（卡片、行、要点、表格行、图片、器材条目都会拆；卡片保持同样的列数，编号接着往下数）。图片缩到不足内容宽度约 70% 时也拆页，不出现小缩略图。只想在视频版删减文字时，在该页写 `"video": {...}` 覆盖字段。
+    - **每页尽量填满**（用户要求，2026-10-22）：分好页后，每页各自挑能放下的最大字号——卡片、行、要点、表格这类随文字长高的页面最大到 140%；有固定高度色块的页面（数字方块、器材、图表、面板、编号列表、封面）最大到 110%，否则字会溢出色块。剩余的高度再均分给卡片和色块，让它们拉长到自拍区上方；只剩一个要点框时，框直接撑满，文字垂直居中。页面标题最多放大到 110%，导航行小标题固定 14 号，所以各页标题大小一致。
+    - 阅读版不受影响。
   - 封面 `title_size_portrait`：竖版封面标题字号，不填时自动选能放下的最大字号。
 
 ### 8. 交付
 
-- 工作目录里放：横版 `.pptx` + PDF、竖版 `-竖屏.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
+- 工作目录里放：横版 `.pptx` + PDF、`-竖屏阅读版.pptx` + PDF、`-竖屏视频版.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
   1. 核心数字：累计、月均、每条，以及主频道的 RPM。
   2. 用了哪些假设：RPM、汇率、计算月均的起点、哪些平台没算进收入。
@@ -147,4 +177,6 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 - `references/rpm-and-income.md`：RPM 默认表、反推方法、Shorts、打赏手续费、汇率。
 - `references/config.md`：config 的全部字段。
 - `references/deck-json.md`：20 种页面类型和字段。
+- `references/collab.md`：多人协作频道的分工分析，包括抽帧、逐帧记录和对应页面。
+- `references/compliance.md`：抖音 / 小红书合规规则、`compliance_check.py` 的命中怎么改。
 - `references/gear.md`：拍摄器材和拍摄方式怎么找证据、怎么归类、`gear.json` 的格式。

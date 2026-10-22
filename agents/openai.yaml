@@ -1,4 +1,4 @@
 interface:
   display_name: "YouTube Channel Report"
-  short_description: "Fetch a YouTube channel's exact views, estimate revenue, and build a Chinese analysis deck"
-  default_prompt: "Use $youtube-channel-report to analyze this YouTube channel (views without Shorts, revenue by RPM, top 10 videos, topics, upload cadence) and build the report PPT."
+  short_description: "Fetch a YouTube channel's exact views, estimate revenue, and build Chinese analysis decks (landscape, portrait, and a portrait video version)"
+  default_prompt: "Use $youtube-channel-report to analyze this YouTube channel (views without Shorts, revenue by RPM, top 10 videos, topics, upload cadence) and build the three report decks."
