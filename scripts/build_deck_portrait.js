@@ -23,7 +23,7 @@ const [deckPath, outPath] = process.argv.slice(2);
 if (!deckPath || !outPath) { console.error("usage: build_deck_portrait.js deck.json out.pptx"); process.exit(1); }
 const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
 const meta = deck.meta || {};
-const HEAD = (meta.fonts && meta.fonts.head) || "Songti SC";
+const HEAD = (meta.fonts && meta.fonts.head) || "PingFang SC";   // Apple-style: PingFang for titles too (user rule, 2026-10-23)
 const BODY = (meta.fonts && meta.fonts.body) || "PingFang SC";
 const PALETTE = { dk1: "1E2230", lt1: "F7F4EE", dk2: "4C5262", lt2: "EDE7DC", accent1: "C2412D", accent2: "B8AD9A",
   accent3: "5F6370", accent4: "C9CCD6", accent5: "2F5D8A", accent6: "E8A894", hlink: "C2412D", folHlink: "2F5D8A" };
@@ -322,9 +322,9 @@ R.topic_bars = (s, d, T) => {
 R.stacked_columns = (s, d, T) => {
   const series = d.series || [], cats = d.categories || [], vals = d.values || [];
   series.forEach((se, i) => {
-    const x = MX + i * 3.0;
+    const step = Math.min(3.0, CW / Math.max(series.length, 1)), x = MX + i * step;
     rect(s, x, T + 0.07, 0.22, 0.22, col(se.color, C.accent1), "legend-" + i);
-    txt(s, se.label, { x: x + 0.32, y: T, w: 2.6, h: 0.36, fontSize: 14, color: C.text1, valign: "middle" });
+    txt(s, se.label, { x: x + 0.32, y: T, w: step - 0.36, h: 0.36, fontSize: 14, color: C.text1, valign: "middle" });
   });
   const totals = vals.map((r) => r.reduce((a, b) => a + b, 0)), maxT = Math.max(...totals, 1);
   const BASE = BOTTOM - (FACECAM ? 0.55 : 1.6), HMAX = BASE - T - 1.2, pitch = CW / Math.max(cats.length, 1), bw = Math.min(0.6, pitch * 0.62);

@@ -5,10 +5,11 @@ description: >-
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
   monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
   each topic is filmed, upload cadence over time, the creator's account matrix (sub-channels, TikTok, Instagram,
-  Buy Me a Coffee tips), and how they film — shooting styles counted from frames plus the likely camera / mic
+  Buy Me a Coffee tips), who the creator is (人物背景: age, hometown, past jobs, family, how their background
+  turns into topics, what top comments love about them), and how they film — shooting styles counted from frames plus the likely camera / mic
   setup (拍摄器材, 用什么拍, 拍摄方式). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
   channel earns (赚了多少钱, 收入估算, 月入, 每个视频赚多少, RPM 多少, 反推 RPM), wants views without Shorts
-  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 竖屏 PPT / 报告 /
+  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 人物背景 / 他是谁 / 家庭成员, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 竖屏 PPT / 报告 /
   数据统计 — even if they only paste a channel URL like youtube.com/@xxx and ask about money. Also use it to
   extend or restyle a report this skill made before. NOT for downloading videos or subtitles (yt-dlp-download),
   not for a single video's content summary, and not for comment-only keyword studies.
@@ -100,7 +101,14 @@ python3 $S/compute_report.py $W/config.json
 
 `deck.json` 是一个页面列表，可以直接编辑：改标题和结论、删页、调顺序，或者插入自定义页。常见的自定义页有“给我们的启示”、“哪些人可以拍”、“还可以拍哪些题材”、“如何开始”、“开通 YPP 的门槛”、“起步建议”。用户给了提纲时，按提纲的顺序排。
 
-**人物页**（用户要求，2026-10-22）：以出镜人为核心的频道（个人或家庭 vlog），在“一页看懂”后面加两页 `cards`：“她/他是谁”（`statement` 写网名、年龄、哪里人、几年级或职业；6 张卡片写性格和特点）和“家庭成员”（每位成员一张卡片：年龄、职业、在视频里做什么）。每一条都要出自视频简介、视频内容或高赞评论，卡片的 `note` 写出处。地域只写到省或城市，不写就读学校、详细地址、家人真名、离婚原因这类隐私，出镜人是未成年人时尤其注意。横版每张卡片的 `body` 控制在约 20 个汉字，否则 3×2 排不下。
+**人物背景（必做，不是可选）**（用户要求，2026-10-22；2026-10-23 起改为必做，之前有报告漏做）：只要频道以出镜人为核心（个人或家庭 vlog、讲自己经历的频道），就必须在“一页看懂”后面加一组 `section: "人物背景"` 的页面，交付前确认 deck.json 里有这一组：
+1. “她/他是谁”（`cards`）：`statement` 写网名、年龄、哪里人、职业或几年级；6 张卡片写性格和特点。
+2. “经历”（`rows`，最多 6 行）：按时间写入行前做什么、怎么开始拍、频道起量的节点。
+3. “家人和身边人”（`cards`）：每位家人或关键人物一张（年龄、职业、在视频里做什么、出镜几条和播放），幕后帮忙拍的朋友也算。
+4. “背景即题材”（`table`）：他的每段背景对应哪个题材、条数、平均播放，用数字说明观众最爱看哪一面。
+5. “观众喜欢他什么”（`cards`）：高赞评论里反复出现的说法，`note` 写视频名和赞数。
+
+怎么找料：把全部长视频的英文自动字幕下下来（`yt-dlp --skip-download --write-auto-subs --sub-langs en-orig`），用正则捞 “I'm 40 / my mom / divorced / I used to work / my hometown” 这类自述句；再抓 3 条代表作的高赞评论（`--write-comments --extractor-args "youtube:comment_sort=top;max_comments=40,all,0"`）。每一条都要出自视频简介、视频内容或高赞评论，卡片的 `note` 写出处。地域只写到省或城市，不写就读学校、详细地址、家人真名、离婚原因、健康状况这类隐私，出镜人是未成年人时尤其注意。横版每张卡片的 `body` 控制在约 20 个汉字，否则 3×2 排不下。`compliance_check.py` 对成年人也会拦“离婚 / 前妻 / 月入 / 第一笔”，改写成“恢复单身 / 结束的婚姻 / 工资每月约 / 后台收益”，前妻这类不出镜的人不单列卡片。
 
 各种页面类型和字段见 `references/deck-json.md`。
 
@@ -116,6 +124,8 @@ python3 $S/compute_report.py $W/config.json
 3. 9:16 **竖屏视频版**：用户录讲解视频用，底部整条留给 16:9 横屏自拍画面。
 
 用户只说“做个 PPT”“出报告”，或者没提格式，也要三份一起交，不要只做其中一份，也不要先问要哪种。三份用同一份 `deck.json`，改内容只改 deck.json，然后三份一起重新生成，不要只更新其中一份。
+
+**字体固定用苹果风**（用户要求，2026-10-23 起）：标题和正文都用苹方（PingFang SC），标题加粗。这是 `build_deck.js` 和 `build_deck_portrait.js` 的默认值，`deck.json` 的 `meta.fonts` 不用写；不要换回宋体。截帧拼图上自己加的说明字也用苹方：`fc-list | grep "PingFang SC"` 找到 PingFang.ttc，用 Pillow 按 `index` 选 SC 的字重（常见是 Semibold = 11）。
 
 ```bash
 $S/build_decks.sh $W/out/deck.json $W "<标题>"
@@ -155,12 +165,13 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 
 ### 8. 交付
 
+- 交付前 `grep 人物背景 out/deck.json`：以出镜人为核心的频道必须有这一组页面（见第 6 步），没有就补上再生成。
 - 工作目录里放：横版 `.pptx` + PDF、`-竖屏阅读版.pptx` + PDF、`-竖屏视频版.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
   1. 核心数字：累计、月均、每条，以及主频道的 RPM。
   2. 用了哪些假设：RPM、汇率、计算月均的起点、哪些平台没算进收入。
   3. 加了哪些提纲以外的页面；竖版里删掉了哪些表格列。
-- 要发给别人时，发 PDF。PPT 用的是 Mac 字体（宋体/苹方），在 Windows 上打开会被替换成别的字体。
+- 要发给别人时，发 PDF。PPT 用的是 Mac 字体（苹方），在 Windows 上打开会被替换成别的字体。
 
 ## 口径（每次都一样，别临时改）
 

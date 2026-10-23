@@ -22,7 +22,7 @@ const [deckPath, outPath] = process.argv.slice(2);
 if (!deckPath || !outPath) { console.error("usage: build_deck.js deck.json out.pptx"); process.exit(1); }
 const deck = JSON.parse(fs.readFileSync(deckPath, "utf8"));
 const meta = deck.meta || {};
-const HEAD = (meta.fonts && meta.fonts.head) || "Songti SC";
+const HEAD = (meta.fonts && meta.fonts.head) || "PingFang SC";   // Apple-style: PingFang for titles too (user rule, 2026-10-23)
 const BODY = (meta.fonts && meta.fonts.body) || "PingFang SC";
 const PALETTE = { dk1: "1E2230", lt1: "F7F4EE", dk2: "4C5262", lt2: "EDE7DC", accent1: "C2412D", accent2: "B8AD9A",
   accent3: "5F6370", accent4: "C9CCD6", accent5: "2F5D8A", accent6: "E8A894", hlink: "C2412D", folHlink: "2F5D8A" };

@@ -4,7 +4,7 @@
 
 ```json
 {"meta": {"title": "Zaza 频道分析", "footer": "Zaza 频道分析 · 数据截至 2026-10-10",
-          "fonts": {"head": "Songti SC", "body": "PingFang SC"}},
+          "fonts": {"head": "PingFang SC", "body": "PingFang SC"}},
  "slides": [ {"type": "cover", ...}, ... ]}
 ```
 
@@ -22,7 +22,7 @@
 
 颜色字段可以写名字或十六进制。可用的名字有：`accent`（砖红）、`accentLight`（浅红）、`blue`、`lightBlue`、`muted`（灰褐）、`gray`、`ink`（深色）、`paper`、`paper2`。
 
-字体默认用 Mac 自带的宋体（标题）和苹方（正文）。要发给 Windows 用户，最好导出成 PDF。
+字体默认是苹果风：标题和正文都用 Mac 自带的苹方（PingFang SC），标题加粗（用户要求，2026-10-23）。不要再换回宋体；用户另有要求时才在 `meta.fonts` 里改。要发给 Windows 用户，最好导出成 PDF。
 
 ## 数据页（compute_report 会自动生成）
 

@@ -18,24 +18,24 @@ pgrep -x Keynote >/dev/null || { open -a Keynote; sleep 5; }
 osascript \
   -e "set f to POSIX file \"$deck\"" \
   -e "set o to POSIX file \"$out\"" \
-  -e 'tell application "Keynote"' \
+  -e 'with timeout of 900 seconds' -e 'tell application "Keynote"' \
   -e '  set d to open f' \
   -e '  delay 3' \
   -e '  export d to o as slide images with properties {image format:PNG}' \
   -e '  close d saving no' \
-  -e 'end tell'
+  -e 'end tell' -e 'end timeout'
 
 if [ "$pdf" = "--pdf" ]; then
   pdfout="${deck%.pptx}.pdf"
   osascript \
     -e "set f to POSIX file \"$deck\"" \
     -e "set o to POSIX file \"$pdfout\"" \
-    -e 'tell application "Keynote"' \
+    -e 'with timeout of 900 seconds' -e 'tell application "Keynote"' \
     -e '  set d to open f' \
     -e '  delay 3' \
     -e '  export d to o as PDF' \
     -e '  close d saving no' \
-    -e 'end tell'
+    -e 'end tell' -e 'end timeout'
   echo "pdf: $pdfout"
 fi
 
