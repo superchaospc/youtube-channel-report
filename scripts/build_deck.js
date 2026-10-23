@@ -96,8 +96,9 @@ R.cover = (s, d) => {
   // PowerPoint does not, so a long title looked fine in the render check but spilled in PowerPoint.
   // The size is the largest that fits every line on one line (or title_size), bottom-aligned above the subtitle.
   const lines = String(d.title || "").split("\n"), TW = 7.6;
-  const fits = (sz) => lines.every((l) => widthPt(l, sz) <= TW * 72 * 0.98);
-  const size = d.title_size || [54, 48, 44, 40, 36, 32].find(fits) || 32;
+  // Also cap the block height: it grows upward from y=3.6 and must stay below the eyebrow (~1.4 in).
+  const fits = (sz) => lines.every((l) => widthPt(l, sz) <= TW * 72 * 0.98) && (lines.length * sz * 1.2) / 72 <= 1.95;
+  const size = d.title_size || [54, 48, 44, 40, 36, 32, 30, 28].find(fits) || 28;
   if (!fits(size)) warnings.push(`slide ${slideNo}: cover title line too wide at ${size}pt`);
   const th = (lines.length * size * 1.2) / 72;
   txt(s, d.title || "", { x: MX, y: 3.6 - th, w: TW, h: th, fontSize: size, bold: true, fontFace: HEAD, color: C.text1, valign: "bottom", wrap: true });

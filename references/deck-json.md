@@ -113,3 +113,9 @@
 竖版每页大约放 15 个汉字一行（30pt 标题）或 26 个汉字一行（15pt 正文）。4 列以上、单元格文字长的表格，竖版里要删列。
 
 `meta.facecam: true`（只影响竖版，平时由 `build_decks.sh` 的 `--facecam` 打开）：底部整条留给 16:9 横屏自拍（宽 7.5、高 4.22 英寸；`meta.facecam_ratio` 可改，例如 `2.3333` 即 21:9），左右边距 0.85 英寸，状态栏（0–0.92 英寸，时间、灵动岛、信号）里不放任何内容；`eyebrow` 放在下一行抖音返回箭头和放大镜中间、水平居中，标题从 1.62 英寸开始；不加色条。放不下的页自动拆成续页；`note` 小字改放演讲者备注；不显示页脚和页码。单页可写 `"video": {...}` 只覆盖视频版字段。
+
+**视频版只放关键词**（视频版默认开启，`meta.video_full: true` 关闭）：
+- `"video": false`：这一页不进视频版（用于和别页重复的明细页）。
+- 自动移进演讲者备注的小字：`tiles[].desc/sub`、`cards[].note`、`lead`、器材 `items[].basis`、`panels[].sub`、`total.caption`、说明页 `left/right.text`、封面 `subtitle`；`video` 覆盖掉的原文也写进该页备注。
+- 紧凑版式：`rows` 一行一条（`name` 加粗 + `desc` 灰色小注 + `tag`，放不下时自动改两行）；`lessons` 一行写 `how → evidence`（第二个表头含“前”时用箭头，否则用“ · ”）；`three_cols` 每栏的 `bullets` 连成一行；`kpis` 的 `findings` 一条一行；数字格去掉说明后变矮。
+- 字数检查（超了打印 `video text too long`）：卡片标题 / 行标题 12 字，卡片正文 / 行说明 / 要点说明 / 表格单元格 14 字，做法 / 证据 / 要点 / 正文 16 字，器材名、图注 18 字，statement / banner / insight / summary / box 24 字；表格最多 3 列 7 行，卡片最多 6 张，每组要点最多 3 条。拉丁字母和数字按 0.55 个字算。

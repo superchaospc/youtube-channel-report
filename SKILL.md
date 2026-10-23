@@ -4,7 +4,7 @@ description: >-
   Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report in three files — a 16:9 landscape deck, a 9:16 portrait (竖屏/竖版) reading deck for phones, and a 9:16 portrait video deck that keeps the whole bottom free for the user's own 16:9 landscape facecam (视频制作版): exact per-video
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
   monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
-  each topic is filmed, upload cadence over time, the creator's account matrix (sub-channels, TikTok, Instagram,
+  each topic is filmed, upload cadence over time, video length vs views (视频时长), who the audience is and what the comments say (观众是谁, 观众评论: comment languages, self-reported countries and ages, comment themes), the creator's account matrix (sub-channels, TikTok, Instagram,
   Buy Me a Coffee tips), who the creator is (人物背景: age, hometown, past jobs, family, how their background
   turns into topics, what top comments love about them), and how they film — shooting styles counted from frames plus the likely camera / mic
   setup (拍摄器材, 用什么拍, 拍摄方式). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
@@ -61,6 +61,19 @@ python3 $S/frame_sample.py $W/data/<handle> --out $W/collab --every 20
 
 每 20 秒抽一帧拼联系表，逐帧记录画面里有谁、主角出镜时谁在拍，再用字幕统计旁白提到每个人的次数，写进 `collab/roles.json`，然后加一组“家庭协作”页面。和单人频道的对比，数据要取之前报告的 `gear.json`。做法和页面见 `references/collab.md`。
 
+### 2d. 视频时长和观众（必做）
+
+提纲里有“视频时长”“观众是谁”“观众评论”三块（见第 6 步），数据这样拿：
+
+```bash
+python3 $S/duration_stats.py $W/data/<handle> --out $W/out/duration.json --slides $W/out/duration_slides.json [--from 2026-03-01]
+yt-dlp --skip-download --write-info-json --write-comments -o "$W/comments/%(id)s" <每条长视频的 URL>   # 被判定为机器人时走 VPS 隧道
+python3 $S/audience_scan.py $W/comments --out $W/out/audience.json --slides $W/out/audience_slides.json
+```
+
+- `duration_stats.py`：时长分段（10 分钟以内 / 10–15 / 15–20 / 20–30 / 30 以上）各多少条、平均和中位播放，按月的平均时长，前 10 条的平均时长，8 分钟以上占比；`--slides` 直接生成 3 页草稿。早期性质不同的视频（比如无人声街拍）用 `--from` 排除。结论要写“早期视频短、频道也小，不全是时长的作用”。
+- `audience_scan.py`：评论用的语言、评论里自报的国家（“我来自 X / 我是 X 人 / 在 X 看”，每人只算一次）、自报年龄和身份（有家庭、单身、同行、退休）、一级评论的话题分布和每类点赞最高的一条，以及博主自己回了多少条；`--slides` 生成 4 页草稿，“意译”一列要自己把英文评论翻成中文填上，每页再补一两句结论。页面上写明“评论者不等于全部观众，观众国家的准确数据只有博主在后台能看到”。
+
 ### 3. 定 RPM
 
 优先级如下：
@@ -101,7 +114,26 @@ python3 $S/compute_report.py $W/config.json
 
 `deck.json` 是一个页面列表，可以直接编辑：改标题和结论、删页、调顺序，或者插入自定义页。常见的自定义页有“给我们的启示”、“哪些人可以拍”、“还可以拍哪些题材”、“如何开始”、“开通 YPP 的门槛”、“起步建议”。用户给了提纲时，按提纲的顺序排。
 
-**人物背景（必做，不是可选）**（用户要求，2026-10-22；2026-10-23 起改为必做，之前有报告漏做）：只要频道以出镜人为核心（个人或家庭 vlog、讲自己经历的频道），就必须在“一页看懂”后面加一组 `section: "人物背景"` 的页面，交付前确认 deck.json 里有这一组：
+**报告提纲（固定顺序，用户要求，2026-10-23）**：deck.json 按下面 12 块排，每页的 `eyebrow` 写所属的块名，每块第一页加 `section`。三份 PPT 都按这个顺序，视频版尤其要照着讲：
+
+| 块 | 放哪些页 |
+|---|---|
+| 人物背景 | 他是谁、经历、家人和身边人 |
+| 频道情况 | 账号矩阵、发展历程、播放怎么涨起来的（每条播放的散点图）、几次起飞（月度新增播放） |
+| 收入情况 | RPM 说明、收入合计、平均每月、平均每条、播放最高的 10 条、副频道 |
+| 拍摄器材 | 器材推断、证据截帧、为什么用这套器材 |
+| 拍摄手法 | 各种机位占比、机位用法、实际画面、一个场景怎么拍、逐条看机位和播放、拍法有没有变 |
+| 题材选择 | 背景即题材、最受欢迎 vs 拍得最多、题材明细 |
+| 题材表现 | 同一题材怎么拍、怎么写：题材从背景变主角、做了哪些改变（开头、标题、封面）、封面前后、最近是不是回到老路 |
+| 视频时长 | `duration_stats.py` 的 3 页 |
+| 发布频率 | 每月发多少条、更新节奏 |
+| 观众是谁 | `audience_scan.py` 的语言和国家、年龄和身份 |
+| 观众评论 | 评论区概况、评论聊什么、高赞评论里的几种话、评论里反复问的问题和博主怎么回应 |
+| 总结 | 一页看懂（数字）、照着拍的几点启示 |
+
+没有数据的页面可以省掉，但块的顺序不变；用户另给提纲时按用户的。下面两段是其中几块的具体做法。
+
+**人物背景（必做，不是可选）**（用户要求，2026-10-22；2026-10-23 起改为必做，之前有报告漏做）：只要频道以出镜人为核心（个人或家庭 vlog、讲自己经历的频道），就必须在封面后面加一组 `section: "人物背景"` 的页面（其中“背景即题材”放进“题材选择”，“观众喜欢他什么”放进“观众评论”），交付前确认 deck.json 里有这一组：
 1. “她/他是谁”（`cards`）：`statement` 写网名、年龄、哪里人、职业或几年级；6 张卡片写性格和特点。
 2. “经历”（`rows`，最多 6 行）：按时间写入行前做什么、怎么开始拍、频道起量的节点。
 3. “家人和身边人”（`cards`）：每位家人或关键人物一张（年龄、职业、在视频里做什么、出镜几条和播放），幕后帮忙拍的朋友也算。
@@ -110,7 +142,7 @@ python3 $S/compute_report.py $W/config.json
 
 怎么找料：把全部长视频的英文自动字幕下下来（`yt-dlp --skip-download --write-auto-subs --sub-langs en-orig`），用正则捞 “I'm 40 / my mom / divorced / I used to work / my hometown” 这类自述句；再抓 3 条代表作的高赞评论（`--write-comments --extractor-args "youtube:comment_sort=top;max_comments=40,all,0"`）。每一条都要出自视频简介、视频内容或高赞评论，卡片的 `note` 写出处。地域只写到省或城市，不写就读学校、详细地址、家人真名、离婚原因、健康状况这类隐私，出镜人是未成年人时尤其注意。横版每张卡片的 `body` 控制在约 20 个汉字，否则 3×2 排不下。`compliance_check.py` 对成年人也会拦“离婚 / 前妻 / 月入 / 第一笔”，改写成“恢复单身 / 结束的婚姻 / 工资每月约 / 后台收益”，前妻这类不出镜的人不单列卡片。
 
-**起飞原因（必做）**（用户要求，2026-10-23）：频道有明显起量的拐点时（某个月播放比上个月翻好几倍），在“更新频率”后面加一组 `section: "起飞原因"` 的页面：
+**起飞原因（必做）**（用户要求，2026-10-23）：频道有明显起量的拐点时（某个月播放比上个月翻好几倍），做下面这些页，按提纲分进各块：1、2 和播放散点图放“频道情况”，3 放“拍摄手法”，4–7 放“题材表现”：
 1. “发展历程”（`rows`）：按月写每个阶段拍什么、播放多少。
 2. “两次起飞”（`table`）：每月新增播放（Social Blade）、发了几条、当月视频中位播放、当月最高的一条。
 3. “拍法有没有变”（`three_cols`）：起飞前后各抽几条视频看帧，再看分辨率变化（`yt-dlp --print '%(height)sp' -f 'bv*'`），回答起飞是不是因为换了器材或拍法。
@@ -171,12 +203,19 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
     - **顶部**：手机状态栏（时间、灵动岛、信号、电池）占顶部约 0–0.92 英寸，**什么都不放**。下面一行左边是抖音返回箭头、右边是放大镜（中心距顶约 1.26 英寸），这一行**不要空着**（空着很怪，用户要求）：把 eyebrow 小标题当成导航栏标题，放在箭头和放大镜中间、水平居中；页面标题紧接着从 1.62 英寸开始。不加色条，不放频道名（用户试过后明确不要，2026-10-22）。
     - **放不下就分页**：先按最小字号（约 86%）决定分几页，放不下的拆成同标题的续页（卡片、行、要点、表格行、图片、器材条目都会拆；卡片保持同样的列数，编号接着往下数）。图片缩到不足内容宽度约 70% 时也拆页，不出现小缩略图。只想在视频版删减文字时，在该页写 `"video": {...}` 覆盖字段。
     - **每页尽量填满**（用户要求，2026-10-22）：分好页后，每页各自挑能放下的最大字号——卡片、行、要点、表格这类随文字长高的页面最大到 140%；有固定高度色块的页面（数字方块、器材、图表、面板、编号列表、封面）最大到 110%，否则字会溢出色块。剩余的高度再均分给卡片和色块，让它们拉长到自拍区上方；只剩一个要点框时，框直接撑满，文字垂直居中。页面标题最多放大到 110%，导航行小标题固定 14 号，所以各页标题大小一致。
+    - **只放关键词**（用户要求，2026-10-23：“每页 ppt 内容不要太多，关键词和关键信息点到就行”）。视频版是边讲边放的，每页只留结论标题和几个关键词、数字，整句说明、出处、举例都不上屏：
+      - 内容页都要写 `"video": {...}`，把字段改成关键词版：卡片正文、行说明不超过约 14 个字，要点、做法、证据不超过约 16 个字，结论框（statement / banner / insight / summary）不超过约 24 个字；表格最多 3 列、7 行（比如前 10 条只留前 5 条）；每页要点最多 3 条。标题照旧写结论。
+      - 和别的页重复的明细页（比如题材明细表）写 `"video": false`，不进视频版。
+      - 生成时自动把小字移进演讲者备注：数字格下面的说明、卡片底部出处、器材依据、封面副标题、合计下面的算式、说明面板的补充文字；被 `video` 覆盖掉的原文也写进该页备注，录视频时照着讲。
+      - 关键词版用紧凑版式，免得字少了还拆页：列表行改成一行（序号 + 关键词 + 灰色小注 + 右侧标签），启示 / 前后对比改成“做法 → 结果”一行，三栏的要点用“ · ”连成一行，数字格变矮。
+      - `build_deck_portrait.js --facecam` 对还像句子的文字打印 `WARN … video text too long (视频版只放关键词)`，交付前要改到没有这条警告。`meta.video_full: true` 可以整份关掉这套规则（一般不用）。
     - 阅读版不受影响。
   - 封面 `title_size_portrait`：竖版封面标题字号，不填时自动选能放下的最大字号。
 
 ### 8. 交付
 
 - 交付前 `grep 人物背景 out/deck.json`：以出镜人为核心的频道必须有这一组页面（见第 6 步），没有就补上再生成。
+- 交付前核对提纲：按顺序列出每页的 `eyebrow`，应该依次是人物背景、频道情况、收入情况、拍摄器材、拍摄手法、题材选择、题材表现、视频时长、发布频率、观众是谁、观众评论、总结；视频版生成时不能有 `video text too long` 警告。
 - 工作目录里放：横版 `.pptx` + PDF、`-竖屏阅读版.pptx` + PDF、`-竖屏视频版.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
   1. 核心数字：累计、月均、每条，以及主频道的 RPM。

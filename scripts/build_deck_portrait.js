@@ -44,6 +44,8 @@ const col = (c, dflt) => (c ? NAMED[c] || c.replace("#", "") : dflt);
 // shorter content area and small print goes to the speaker notes. A slide can carry "video": {...}
 // overrides (merged after "portrait") to trim text for this version only.
 const FACECAM = !process.argv.includes("--no-facecam") && (!!meta.facecam || process.argv.includes("--facecam"));
+// Video version shows keywords only (see trimVideo / lintVideo below); meta.video_full: true turns that off.
+const KEYWORDS = FACECAM && !meta.video_full;
 const SW = 7.5, SH = 13.333, MX = FACECAM ? 0.85 : 0.5, CW = SW - 2 * MX, GAP = 0.2, FOOT_Y = 12.75;
 const CAM_RATIO = meta.facecam_ratio || 16 / 9, CAM_H = SW / CAM_RATIO, CAM_TOP = SH - CAM_H, TOP = FACECAM ? 1.62 : 0.85;
 // Video version: the top of the screen belongs to the phone and 抖音 — status bar (clock, Dynamic
@@ -79,7 +81,7 @@ master("P_ALT", C.background2);
 pres.defineSlideMaster({ title: "P_COVER", background: { color: C.background1 }, objects: [] });
 
 // ---------------------------------------------------------------- helpers
-const isCJK = (ch) => /[　-鿿＀-￯]/.test(ch);
+const isCJK = (ch) => /[　-鿿＀-￯←-⇿]/.test(ch);   // arrows render full width in PingFang too
 const widthPt = (s, size) => [...String(s)].reduce((a, ch) => a + (isCJK(ch) ? size : size * 0.55), 0);
 // Estimated wrapped line count for a box w inches wide.
 const lines = (s, size, w) => String(s || "").split("\n").reduce((a, l) => a + Math.max(1, Math.ceil(widthPt(l, size * SCALE) / (w * 72 * 0.95))), 0);
@@ -104,6 +106,7 @@ const oval = (s, x, y, d, n, name) => {
   txt(s, String(n), { x, y, w: d, h: d, fontSize: 15, bold: true, color: C.background1, align: "center", valign: "middle" });
 };
 const th = (t, al) => ({ text: t, options: { bold: true, fill: { color: C.text1 }, color: C.background1, align: al } });
+const run = (text, size, o = {}) => ({ text, options: Object.assign({ fontSize: Math.round(size * SCALE * 2) / 2 }, o) });
 const bullets = (items) => items.map((t, i) => ({ text: t, options: { bullet: true, breakLine: i < items.length - 1 } }));
 const bulletsH = (items, size, w) => items.reduce((a, t) => a + textH(t, size, w - 0.4, 1.3) + 0.14, 0);
 let pendingNotes = [];
@@ -144,7 +147,7 @@ R.cover = (s, d) => {
   const fits = (sz) => ls.every((l) => widthPt(l, sz) <= TW * 72 * 0.98);
   const size = d.title_size_portrait || [44, 40, 36, 34, 32, 30, 28].find((z) => fits(z * SCALE)) || 28;
   if (!fits(size)) warnings.push(`slide ${slideNo}: cover title line too wide at ${size}pt`);
-  const tH = (ls.length * size * SCALE * 1.3) / 72, TY = Y0 + 1.25;
+  const tH = (ls.length * size * SCALE * 1.45) / 72, TY = Y0 + 1.25;   // Keynote/PowerPoint render PingFang lines ~1.4x the point size
   rect(s, MX, Y0 + 0.85, 0.9, 0.08, C.accent1, "cover-rule");
   txt(s, d.title || "", { x: MX, y: TY, w: TW, h: tH, fontSize: size, bold: true, fontFace: HEAD, color: C.text1, wrap: true, lineSpacingMultiple: 1.15 });
   let y = TY + tH + 0.35;
@@ -166,7 +169,7 @@ function tiles2(s, tiles, y, o = {}) {
   const W = (CW - GAP) / 2, H = o.h || 1.9;
   tiles.forEach((t, i) => {
     const x = MX + (i % 2) * (W + GAP), yy = y + Math.floor(i / 2) * (H + GAP), dark = !!t.dark;
-    const oy = yy + (H - 1.9) / 2;
+    const oy = tiles.some((t) => t.desc || t.sub) ? yy + (H - 1.9) / 2 : yy + (H - 1.52) / 2;
     box(s, x, yy, W, H, dark ? C.text1 : o.alt ? C.background1 : C.background2, "tile-" + (i + 1));
     const lab = t.label || "", val = t.value || "", sub = t.desc || t.sub || "";
     const top = o.valueFirst ? [val, lab] : [lab, val];
@@ -184,7 +187,18 @@ function tiles2(s, tiles, y, o = {}) {
 }
 
 R.kpis = (s, d, T) => {
-  let y = tiles2(s, d.tiles || [], T, { valueFirst: true });
+  let y = tiles2(s, d.tiles || [], T, { valueFirst: true, h: KEYWORDS ? 1.5 : undefined });
+  if (KEYWORDS) {   // video version: one line per finding — red keyword, then the number
+    y += 0.35;
+    const fs = d.findings || [], fex = spread(fs.map(() => 0.62), y, 0.15, 0.1, 0.3);
+    fs.forEach((f, i) => {
+      const h = 0.62 + fex;
+      box(s, MX, y, CW, h, d.bg === "alt" ? C.background1 : C.background2, "finding");
+      txt(s, [run(f.title || "", 17, { bold: true, color: C.accent1 }), run(f.text ? "  " + f.text : "", 15, { color: C.text1 })], { x: MX + 0.25, y, w: CW - 0.5, h, valign: "middle", fit: "shrink" });
+      y += h + 0.15;
+    });
+    return check(y);
+  }
   y += 0.45;
   const fhs = (d.findings || []).map((f) => textH(f.text, 15, CW - 0.5, 1.3) + 0.85), fex = spread(fhs, y, 0.2, 0.1, 0.5);
   (d.findings || []).forEach((f, i) => {
@@ -200,6 +214,28 @@ R.kpis = (s, d, T) => {
 R.rows = (s, d, T) => {
   let y = T;
   const rows = (d.rows || []).slice(0, 6), bg = d.bg === "alt" ? C.background1 : C.background2;
+  if (KEYWORDS) {
+    // Tag column only as wide as the longest tag; keyword and note share one line when they fit,
+    // otherwise every row gets a second line for the note (same height for all rows).
+    const tagW = Math.min(2.0, Math.max(0, ...rows.map((r) => (r.tag ? widthPt(r.tag, 15 * SCALE) / 72 + 0.15 : 0))));
+    const tw = CW - 1.0 - tagW - 0.1;
+    const one = rows.every((r) => widthPt(r.name || "", 18 * SCALE) + widthPt(r.desc ? "  " + r.desc : "", 15 * SCALE) <= tw * 72 * 0.92);
+    const RH = one ? 0.72 : 1.0, ex = spread(rows.map(() => RH), T, 0.15, 0.1, 0.35);
+    rows.forEach((r, i) => {
+      const h = RH + ex;
+      box(s, MX, y, CW, h, bg, "row-" + (i + 1));
+      oval(s, MX + 0.2, y + (h - 0.44) / 2, 0.44, (d._n0 || 0) + i + 1, "row-num-" + (i + 1));
+      if (one) txt(s, [run(r.name || "", 18, { bold: true, color: C.text1 }), run(r.desc ? "  " + r.desc : "", 15, { color: C.text2 })], { x: MX + 0.8, y, w: tw, h, valign: "middle", fit: "shrink" });
+      else {
+        const c = y + (h - 0.8) / 2;
+        txt(s, r.name || "", { x: MX + 0.8, y: c, w: tw, h: 0.44, fontSize: 18, bold: true, color: C.text1, valign: "middle", fit: "shrink" });
+        txt(s, r.desc || "", { x: MX + 0.8, y: c + 0.44, w: tw, h: 0.36, fontSize: 15, color: C.text2, valign: "middle", fit: "shrink" });
+      }
+      if (r.tag) txt(s, r.tag, { x: MX + CW - tagW - 0.2, y, w: tagW, h, fontSize: 15, bold: true, color: C.accent1, valign: "middle", align: "right", fit: "shrink" });
+      y += h + 0.15;
+    });
+    return check(y);
+  }
   const hOf = (r) => (w) => 0.75 + textH(r.desc || "", 15, w - 1.05, 1.3) + 0.25;
   const ex = spread(rows.map((r) => hOf(r)(CW)), T, 0.18, noteRes(d.note));
   rows.forEach((r, i) => {
@@ -242,7 +278,7 @@ R.explainer = (s, d, T) => {
 };
 
 R.stats4 = (s, d, T) => {
-  let y = tiles2(s, (d.tiles || []).slice(0, 4), T, { h: FACECAM ? 2.0 : 2.3 }) + 0.4;
+  let y = tiles2(s, (d.tiles || []).slice(0, 4), T, { h: KEYWORDS ? 1.5 : FACECAM ? 2.0 : 2.3 }) + 0.4;
   if (d.bullets && d.bullets.length) {
     const { x, w, h: h0 } = lane(y, (w) => bulletsH(d.bullets, 15, w - 0.6) + 0.45), h = FACECAM ? Math.max(h0, BOTTOM - y - 0.25) : h0;
     box(s, x, y, w, h, d.bg === "alt" ? C.background1 : C.background2, "insight");
@@ -346,13 +382,17 @@ R.stacked_columns = (s, d, T) => {
 
 R.three_cols = (s, d, T) => {
   let y = T;
-  const cs = (d.cols || []).slice(0, 3), hOf = (c) => (w) => 0.8 + bulletsH(c.bullets || [], 15, w - 0.6) + 0.25;
+  const cs0 = (d.cols || []).slice(0, 3);
+  // Video version: a column's bullets become one keyword line joined with “ · ”.
+  const cs = KEYWORDS ? cs0.map((c) => Object.assign({}, c, { line: (c.bullets || []).join("  ·  "), bullets: [] })) : cs0;
+  const hOf = (c) => (w) => (KEYWORDS ? 0.78 + textH(c.line, 16, w - 0.6, 1.3) + 0.22 : 0.8 + bulletsH(c.bullets || [], 15, w - 0.6) + 0.25);
   const cex = spread(cs.map((c) => hOf(c)(CW)), T, 0.25, d.banner ? 1.2 : 0.1, 1.2);
   cs.forEach((c, i) => {
     const dark = !!c.dark, { x, w, h: h0 } = lane(y, hOf(c)), h = h0 + cex, bh = bulletsH(c.bullets || [], 15, w - 0.6);
-    box(s, x, y, w, h, dark ? C.text1 : C.background2, "col-" + i);
+    box(s, x, y, w, h, dark ? C.text1 : d.bg === "alt" ? C.background1 : C.background2, "col-" + i);
     txt(s, c.title || "", { x: x + 0.3, y: y + 0.22, w: w - 0.6, h: 0.42, fontSize: 18, bold: true, color: dark ? C.background1 : C.accent1 });
-    txt(s, bullets(c.bullets || []), { x: x + 0.3, y: y + 0.75, w: w - 0.6, h: bh, fontSize: 15, color: dark ? C.background1 : C.text1, paraSpaceAfter: 6, lineSpacingMultiple: 1.2 });
+    if (KEYWORDS) txt(s, c.line, { x: x + 0.3, y: y + 0.72, w: w - 0.6, h: h - 0.9, fontSize: 16, color: dark ? C.background1 : C.text1, wrap: true, lineSpacingMultiple: 1.3 });
+    else txt(s, bullets(c.bullets || []), { x: x + 0.3, y: y + 0.75, w: w - 0.6, h: bh, fontSize: 15, color: dark ? C.background1 : C.text1, paraSpaceAfter: 6, lineSpacingMultiple: 1.2 });
     y += h + 0.25;
   });
   if (d.banner) y = block(s, d.banner, y, { fill: C.accent1 }) + 0.2;
@@ -363,6 +403,19 @@ R.lessons = (s, d, T) => {
   let y = T;
   const hd = d.headers || ["要点", "怎么做", "数据佐证"], rows = (d.rows || []).slice(0, 5), bg = d.bg === "alt" ? C.background1 : C.background2;
   const ev = (r) => (hd[2] ? hd[2] + "：" : "") + (r.evidence || "");
+  if (KEYWORDS) {
+    const arrow = /前/.test(hd[1] || "") ? "  →  " : "  ·  ";
+    const ex = spread(rows.map(() => 0.95), T, 0.15, 0.1, 0.35);
+    rows.forEach((r, i) => {
+      const h = 0.95 + ex, c = y + ex / 2;
+      box(s, MX, y, CW, h, bg, "lesson-" + i);
+      oval(s, MX + 0.2, c + 0.25, 0.44, (d._n0 || 0) + i + 1, "lesson-num-" + i);
+      txt(s, r.title || "", { x: MX + 0.8, y: c + 0.1, w: CW - 1.0, h: 0.44, fontSize: 18, bold: true, color: C.text1, valign: "middle", fit: "shrink" });
+      txt(s, [run(r.how || "", 15, { color: C.text1 }), run(r.evidence ? arrow + r.evidence : "", 15, { color: C.accent1, bold: true })], { x: MX + 0.8, y: c + 0.54, w: CW - 1.0, h: 0.34, valign: "middle", fit: "shrink" });
+      y += h + 0.15;
+    });
+    return check(y);
+  }
   const hOf = (r) => (w) => 0.7 + textH(r.how || "", 15, w - 1.05, 1.25) + textH(ev(r), 13, w - 1.05, 1.2) + 0.3;
   const ex = spread(rows.map((r) => hOf(r)(CW)), T, 0.18, noteRes(d.note));
   rows.forEach((r, i) => {
@@ -522,6 +575,54 @@ function fallback(s, d, T) {
   warnings.push(`slide ${slideNo}: type "${d.type}" has no portrait layout, rendered as plain text`);
 }
 
+// ---------------------------------------------------------------- video version: keywords only
+// The video version is talked over, not read (user rule, 2026-10-23): a page shows the conclusion
+// title plus a few keywords and numbers. Small print (tile descriptions, card sources, gear basis,
+// captions under totals…) moves to the speaker notes automatically; the full wording of anything a
+// slide's "video" override replaced goes there too, so the presenter can still read it while
+// recording. lintVideo() warns about text that is still sentence-length. meta.video_full: true
+// switches this off.
+const strs = (v, out = []) => {
+  if (typeof v === "string") out.push(v);
+  else if (Array.isArray(v)) v.forEach((x) => strs(x, out));
+  else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) if (!["path", "color", "align", "width", "ratio", "layout", "fill"].includes(k)) strs(x, out);
+  return out;
+};
+function trimVideo(d) {
+  const notes = [], x = Object.assign({}, d);
+  const take = (t, label) => { if (t) notes.push(label ? `${label}：${t}` : t); };
+  if (x.type === "cover") { take(x.subtitle); x.subtitle = null; }
+  if (x.lead) { take(x.lead); x.lead = null; }
+  if (x.tiles) x.tiles = x.tiles.map((t) => { take(t.desc || t.sub, `${t.label || ""} ${t.value || ""}`.trim()); return Object.assign({}, t, { desc: null, sub: null }); });
+  if (x.cards) x.cards = x.cards.map((c) => { take(c.note, c.title); return Object.assign({}, c, { note: null }); });
+  if (x.type === "gear" && x.items) x.items = x.items.map((it) => { take(it.basis, it.name); return Object.assign({}, it, { basis: null }); });
+  if (x.panels) x.panels = x.panels.map((p) => { take(p.sub, p.title); return Object.assign({}, p, { sub: null }); });
+  if (x.total && x.total.caption) { take(x.total.caption); x.total = Object.assign({}, x.total, { caption: null }); }
+  ["left", "right"].forEach((k) => { if (x[k] && x[k].text && x.type === "explainer") { take(x[k].text, x[k].title); x[k] = Object.assign({}, x[k], { text: null }); } });
+  return { d: x, notes };
+}
+const VW = (s) => widthPt(String(s || ""), 1);   // width in CJK characters (Latin and digits count 0.55)
+function lintVideo(d) {
+  const long = [];
+  const chk = (s, lim, what) => { if (s && VW(s) > lim + 0.5) long.push(`${what}「${String(s).slice(0, 12)}…」${VW(s).toFixed(0)} 字 > ${lim}`); };
+  const many = (arr, lim, what) => { if (arr && arr.length > lim) long.push(`${what} ${arr.length} 条 > ${lim}`); };
+  ["statement", "banner", "insight", "summary"].forEach((k) => chk(d[k], 24, k));
+  if (d.box) chk(d.box.text, 24, "box");
+  (d.cards || []).forEach((c) => { chk(c.title, 12, "卡片标题"); chk(c.body, 14, "卡片正文"); });
+  many(d.cards, 6, "卡片");
+  if (d.type === "rows") (d.rows || []).forEach((r) => { chk(r.name, 12, "行标题"); chk(r.desc, 14, "行说明"); });
+  if (d.type === "lessons") (d.rows || []).forEach((r) => { chk(r.title, 12, "标题"); chk(r.how, 16, "做法"); chk(r.evidence, 16, "证据"); });
+  (d.findings || []).forEach((f) => { chk(f.title, 12, "要点"); chk(f.text, 14, "要点说明"); });
+  (d.items || []).forEach((it) => { if (d.type === "numbered") { chk(it.title, 12, "标题"); chk(it.body, 16, "正文"); } if (d.type === "gear") chk(it.name, 18, "器材"); });
+  const bl = (arr, what) => { (arr || []).forEach((b) => chk(b, 16, what)); many(arr, 3, what); };
+  bl(d.bullets, "要点");
+  (d.cols || []).forEach((c) => bl(c.bullets, c.title || "栏"));
+  [d.left, d.right].forEach((P) => P && bl(P.bullets, P.title || "面板"));
+  if (d.type === "table") { (d.rows || []).forEach((r) => r.forEach((t) => chk(t, 14, "表格"))); many(d.rows, 7, "表格行"); if ((d.columns || []).length > 3) long.push(`表格 ${d.columns.length} 列 > 3`); }
+  (d.images || []).forEach((im) => chk(im.caption, 18, "图注"));
+  if (long.length) warnings.push(`slide ${slideNo}: video text too long (视频版只放关键词) — ${long.join("；")}`);
+}
+
 // ---------------------------------------------------------------- build
 function header(s, d) {
   if (FACECAM) {
@@ -594,9 +695,19 @@ const hasSections = deck.slides.some((d) => d.section);
 let section = null, n = 0;
 deck.slides.forEach((d0) => {
   if (d0.portrait === false) return;
-  const d1 = Object.assign({}, d0, d0.portrait || {}, (FACECAM && d0.video) || {});
+  if (FACECAM && d0.video === false) return;   // "video": false — detail page left out of the video version
+  const base = Object.assign({}, d0, d0.portrait || {});
+  let d1 = Object.assign({}, base, (FACECAM && d0.video) || {}), videoNotes = [];
+  if (KEYWORDS) {
+    const t = trimVideo(d1);
+    d1 = t.d;
+    const replaced = Object.keys(d0.video || {}).filter((k) => !/^(title|title_portrait|title_size_portrait|eyebrow|layout|bg|columns|bold_col)$/.test(k));
+    const kept = new Set(strs(d0.video || {}));
+    const full = replaced.flatMap((k) => strs(base[k])).filter((s) => s && !kept.has(s));
+    videoNotes = (full.length ? ["完整内容：" + full.join(" / ")] : []).concat(t.notes);
+  }
   SCALE = BASE_SCALE;
-  paginate(d1).forEach((d) => {
+  paginate(d1).forEach((d, pageIdx) => {
   // Video version: use the largest type that still fits, so a short page is not left half empty;
   // stacked cards and blocks then stretch (spread) over whatever height is left.
   if (FACECAM) SCALE = FIT_SCALES.find((sc) => { SCALE = sc; return sc <= maxScale(d) && fitsPage(d); }) || BASE_SCALE;
@@ -605,9 +716,10 @@ deck.slides.forEach((d0) => {
   const masterName = d.type === "cover" ? "P_COVER" : d.bg === "alt" ? "P_ALT" : "P_LIGHT";
   const s = pres.addSlide(Object.assign({ masterName }, hasSections ? { sectionTitle: section } : {}));
   pendingNotes = [];
+  if (KEYWORDS) lintVideo(d);
   const T = d.type === "cover" ? 0 : header(s, d);
   (R[d.type] || fallback)(s, d, T);
-  const allNotes = [d.notes, ...pendingNotes].filter(Boolean).join("\n\n");
+  const allNotes = [d.notes, ...pendingNotes, ...(pageIdx === 0 ? videoNotes : [])].filter(Boolean).join("\n\n");
   if (allNotes) s.addNotes(allNotes);
   });
 });
