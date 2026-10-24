@@ -116,6 +116,7 @@
 
 **视频版只放关键词**（视频版默认开启，`meta.video_full: true` 关闭）：
 - `"video": false`：这一页不进视频版（用于和别页重复的明细页）。
+- `"one_per_page": true`（`images` 页，可写在 `video` 里）：视频版每张图单独一页、占满宽度，适合几组截帧拼图。
 - 自动移进演讲者备注的小字：`tiles[].desc/sub`、`cards[].note`、`lead`、器材 `items[].basis`、`panels[].sub`、`total.caption`、说明页 `left/right.text`、封面 `subtitle`；`video` 覆盖掉的原文也写进该页备注。
 - 紧凑版式：`rows` 一行一条（`name` 加粗 + `desc` 灰色小注 + `tag`，放不下时自动改两行）；`lessons` 一行写 `how → evidence`（第二个表头含“前”时用箭头，否则用“ · ”）；`three_cols` 每栏的 `bullets` 连成一行；`kpis` 的 `findings` 一条一行；数字格去掉说明后变矮。
 - 字数检查（超了打印 `video text too long`）：卡片标题 / 行标题 12 字，卡片正文 / 行说明 / 要点说明 / 表格单元格 14 字，做法 / 证据 / 要点 / 正文 16 字，器材名、图注 18 字，statement / banner / insight / summary / box 24 字；表格最多 3 列 7 行，卡片最多 6 张，每组要点最多 3 条。拉丁字母和数字按 0.55 个字算。

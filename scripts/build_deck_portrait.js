@@ -658,6 +658,9 @@ function fitsPage(d) {
 const SPLIT = { table: "rows", cards: "cards", rows: "rows", lessons: "rows", numbered: "items", three_cols: "cols", panels: "panels", stats4: "bullets", images: "images", kpis: "findings" };
 const NUMBERED = { rows: 1, lessons: 1, numbered: 1 };
 function paginate(d) {
+  // "one_per_page": true on an images slide — video version shows each image on its own page, full width.
+  if (FACECAM && d.type === "images" && d.one_per_page && (d.images || []).length > 1)
+    return d.images.map((im, i) => Object.assign({}, d, { images: [im] }, i ? { statement: null } : {}, i < d.images.length - 1 ? { banner: null, note: null } : {}));
   if (!FACECAM || fitsPage(d)) return [d];
   if (d.type === "gear") return [Object.assign({}, d, { items: [], summary: null, note: null }), ...paginateList(Object.assign({}, d, { style: [], specs: null }), "items")];
   if (d.type === "topic_bars" && d.left && d.right) return [Object.assign({}, d, { right: null, insight: null, note: null }), Object.assign({}, d, { left: null })];

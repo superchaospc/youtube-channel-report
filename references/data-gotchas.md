@@ -30,6 +30,7 @@
   NO_PROXY='*' yt-dlp --proxy socks5://127.0.0.1:1091 --skip-download --print "%(id)s %(timestamp)s" URL
   ```
   走隧道 curl 视频页时，有时仍会遇到机器人检测，但 yt-dlp 一般能过。
+- 2026-10-23：本机和多台 VPS（mrnocheat88、sulishi、c20261007、molly、jabbar、mly）同时被拦，换 `--extractor-args "youtube:player_client=tv_simply"`（或 `android_vr`、`mweb`、`web_embedded`）就能下，360p 以下够看画面。
 - yt-dlp 报 403 时，通常是版本太旧，升级即可（`brew upgrade yt-dlp` 或 `pip install -U yt-dlp`）。
 
 ## 其他平台
