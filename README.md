@@ -33,6 +33,7 @@
 - **起飞原因**：频道有明显起量拐点时，自动加一组页面：发展历程、每月播放和爆款、拍法有没有变（抽帧 + 分辨率）、题材 / 开头 / 标题 / 封面前后对比、某个题材从背景变主角、最近是不是又回到老路。结论会写明“时间对得上，不一定是因果”。
 - **多人协作频道**：家庭、情侣、搭档类频道，按固定间隔抽帧，统计每个人出镜多少、谁在掌镜，再和单人自拍频道对比分工。
 - **拍摄器材和拍摄方式**：扫描简介和评论里的器材线索，下载 YouTube 自动截取的视频帧拼成联系表，读取分辨率和帧率。AI 逐帧统计拍摄方式（手持自拍、固定机位、第一视角……），再结合证据推断器材，每一条都标明是“有证据”还是“推断”。用程序逐秒测固定机位占比，分清三脚架和有人跟拍，不会把站着不动的跟拍算成三脚架。能分出一个频道混用的几种器材：挂胸前的运动相机、三脚架、手持云台（看近景有没有背景虚化、直线弯不弯），以及朋友帮拍。
+- **旁白分析**：靠旁白撑起视频的频道（旁白占全片 60% 以上、对镜头画面不到 30%），单独做一块旁白分析。用自动字幕的逐词时间算旁白占全片时长、每分钟词数、uh/um 口头语、过去时回顾和固定模板环节，列出“透明人 → transparent person”这类中文直译的说法，统计评论里夸声音、怀疑 AI 配音的人数。再判断旁白是不是“中文写稿 → 翻译 → 本人念 → 后期配上去”，每一步标“有证据”或“推断”。
 - **出 PPT**：同一份内容出三份——16:9 横版、9:16 竖屏阅读版（每种页面都重新上下排版、字号放大，适合手机），和 9:16 竖屏视频版（底部留出自拍画面，见下文）。自带 20 种版式，包括数据页（KPI、表格、柱状图、题材对比）和叙述页（启示、卡片、对比面板、编号建议）。柱状图用形状画，在 PowerPoint、Keynote 和访达预览里都能正常显示。生成完自动用 Keynote 渲染成图片，用来检查排版。
 - **抖音 / 小红书合规检查**：竖版会发到国内平台，生成前自动扫一遍站外平台名、引流词、收益承诺、极限词、未成年人隐私等，给出改法。
 - **附带**：逐条视频的 CSV（含中文标题、题材、收入，用 Excel 打开不乱码），以及一份 `report.md` 摘要。
@@ -82,6 +83,7 @@ python3 $S/social_stats.py --tiktok handle --bmc slug        # TikTok 粉丝数�
 python3 $S/gear_scan.py WORK/data/handle --out WORK/gear     # 拍摄器材证据：简介、评论、截帧联系表、分辨率和帧率
 python3 $S/duration_stats.py WORK/data/handle --out WORK/out/duration.json   # 时长分段 vs 播放、每月平均时长
 python3 $S/audience_scan.py WORK/comments --out WORK/out/audience.json      # 评论语言、国家、年龄、话题
+python3 $S/narration_stats.py WORK/data/handle --subs WORK/subs --comments WORK/comments   # 旁白占比、语速、口头语、模板、直译候选、评论对声音的反应
 python3 $S/static_cam.py WORK/collab/video/*.mp4            # 每条视频有多少秒是固定机位（三脚架 / 放下），区分三脚架和有人跟拍
 python3 $S/frame_sample.py WORK/data/handle --out WORK/collab --every 20   # 多人协作：每 20 秒抽一帧拼联系表
 python3 $S/compute_report.py WORK/config.json                # 计算，输出 numbers.json、report.md、CSV、deck.json

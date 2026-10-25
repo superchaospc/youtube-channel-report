@@ -7,9 +7,10 @@ description: >-
   each topic is filmed, upload cadence over time, video length vs views (视频时长), who the audience is and what the comments say (观众是谁, 观众评论: comment languages, self-reported countries and ages, comment themes), the creator's account matrix (sub-channels, TikTok, Instagram,
   Buy Me a Coffee tips), who the creator is (人物背景: age, hometown, past jobs, family, how their background
   turns into topics, what top comments love about them), and how they film — shooting styles counted from frames plus the likely camera / mic
-  setup (拍摄器材, 用什么拍, 拍摄方式). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
+  setup (拍摄器材, 用什么拍, 拍摄方式), and the narration for voice-over driven channels (旁白分析: share of runtime
+  narrated, words per minute, read-from-script and translated-from-Chinese signs, voice-over vs. live sound). Use this WHENEVER the user wants to 分析/拆解 a YouTube 频道 or 博主, asks how much a
   channel earns (赚了多少钱, 收入估算, 月入, 每个视频赚多少, RPM 多少, 反推 RPM), wants views without Shorts
-  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 人物背景 / 他是谁 / 家庭成员, 拍摄器材 / 用什么设备拍, or a 频道分析 PPT / 竖屏 PPT / 报告 /
+  (去掉 shorts 的播放), the most-viewed videos and their earnings, 题材分析, 更新频率, 人物背景 / 他是谁 / 家庭成员, 拍摄器材 / 用什么设备拍, 旁白 / 配音 / 写稿, or a 频道分析 PPT / 竖屏 PPT / 报告 /
   数据统计 — even if they only paste a channel URL like youtube.com/@xxx and ask about money. Also use it to
   extend or restyle a report this skill made before. NOT for downloading videos or subtitles (yt-dlp-download),
   not for a single video's content summary, and not for comment-only keyword studies.
@@ -74,6 +75,17 @@ python3 $S/audience_scan.py $W/comments --out $W/out/audience.json --slides $W/o
 - `duration_stats.py`：时长分段（10 分钟以内 / 10–15 / 15–20 / 20–30 / 30 以上）各多少条、平均和中位播放，按月的平均时长，前 10 条的平均时长，8 分钟以上占比；`--slides` 直接生成 3 页草稿。早期性质不同的视频（比如无人声街拍）用 `--from` 排除。结论要写“早期视频短、频道也小，不全是时长的作用”。
 - `audience_scan.py`：评论用的语言、评论里自报的国家（“我来自 X / 我是 X 人 / 在 X 看”，每人只算一次）、自报年龄和身份（有家庭、单身、同行、退休）、一级评论的话题分布和每类点赞最高的一条，以及博主自己回了多少条；`--slides` 生成 4 页草稿，“意译”一列要自己把英文评论翻成中文填上，每页再补一两句结论。页面上写明“评论者不等于全部观众，观众国家的准确数据只有博主在后台能看到”。
 
+### 2e. 旁白分析（每个频道都跑，旁白型频道必做一整块）
+
+```bash
+python3 $S/narration_stats.py $W/data/<handle> --subs $W/subs --comments $W/comments \
+  --titles $W/titles_zh.json --name <网名> --out $W/out/narration.json --slides $W/out/narration_slides.json
+```
+
+读油管自动字幕的逐词时间，算出旁白占全片时长、每分钟词数（另给播放前 3 条的中位数，和别的频道比时用这个）、uh/um 口头语、过去时回顾、模板环节（钩子开头、自我介绍、报金额、换算美元、提问、告别），列出“透明人 → transparent person”这类直译候选；加 `--comments` 时还统计夸声音、怀疑 AI 配音、问写稿的评论，以及博主本人关于口音和配音的回复。
+
+**旁白占比 60% 以上、对镜头画面不到 30% 的，算旁白型频道**（用户要求，2026-10-25，kiki in China）：旁白就是报告重点，要单独做「旁白分析」一块，6 页左右，并判断旁白是“中文写稿 → 翻译 → 本人念 → 后期配上去”的哪几步，每一步标“有证据 / 推断”。不是旁白型的，只在「拍摄手法」里放一页“原声还是旁白”。判断标准、证据怎么认、页面怎么排见 `references/narration.md`。
+
 ### 3. 定 RPM
 
 优先级如下：
@@ -114,7 +126,7 @@ python3 $S/compute_report.py $W/config.json
 
 `deck.json` 是一个页面列表，可以直接编辑：改标题和结论、删页、调顺序，或者插入自定义页。常见的自定义页有“给我们的启示”、“哪些人可以拍”、“还可以拍哪些题材”、“如何开始”、“开通 YPP 的门槛”、“起步建议”。用户给了提纲时，按提纲的顺序排。
 
-**报告提纲（固定顺序，用户要求，2026-10-23）**：deck.json 按下面 12 块排，每页的 `eyebrow` 写所属的块名，每块第一页加 `section`。三份 PPT 都按这个顺序，视频版尤其要照着讲：
+**报告提纲（固定顺序，用户要求，2026-10-23；2026-10-25 加「旁白分析」）**：deck.json 按下面 13 块排，每页的 `eyebrow` 写所属的块名，每块第一页加 `section`。三份 PPT 都按这个顺序，视频版尤其要照着讲：
 
 | 块 | 放哪些页 |
 |---|---|
@@ -123,6 +135,7 @@ python3 $S/compute_report.py $W/config.json
 | 收入情况 | RPM 说明、收入合计、平均每月、平均每条、播放最高的 10 条、副频道 |
 | 拍摄器材 | 器材推断、证据截帧、为什么用这套器材 |
 | 拍摄手法 | 各种机位占比、机位用法、实际画面、一个场景怎么拍、逐条看机位和播放、拍法有没有变 |
+| 旁白分析 | 旁白型频道必做（见 2e）：旁白是核心、旁白量对比、旁白怎么做出来、证据、模板、观众怎么看旁白；其他频道省掉这一块 |
 | 题材选择 | 背景即题材、最受欢迎 vs 拍得最多、题材明细 |
 | 题材表现 | 同一题材怎么拍、怎么写：题材从背景变主角、做了哪些改变（开头、标题、封面）、封面前后、最近是不是回到老路 |
 | 视频时长 | `duration_stats.py` 的 3 页 |
@@ -215,7 +228,7 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 ### 8. 交付
 
 - 交付前 `grep 人物背景 out/deck.json`：以出镜人为核心的频道必须有这一组页面（见第 6 步），没有就补上再生成。
-- 交付前核对提纲：按顺序列出每页的 `eyebrow`，应该依次是人物背景、频道情况、收入情况、拍摄器材、拍摄手法、题材选择、题材表现、视频时长、发布频率、观众是谁、观众评论、总结；视频版生成时不能有 `video text too long` 警告。
+- 交付前核对提纲：按顺序列出每页的 `eyebrow`，应该依次是人物背景、频道情况、收入情况、拍摄器材、拍摄手法、（旁白分析）、题材选择、题材表现、视频时长、发布频率、观众是谁、观众评论、总结；旁白型频道（`narration.json` 的旁白占比 60% 以上）必须有「旁白分析」，`grep 旁白分析 out/deck.json` 确认；视频版生成时不能有 `video text too long` 警告。
 - 工作目录里放：横版 `.pptx` + PDF、`-竖屏阅读版.pptx` + PDF、`-竖屏视频版.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
   1. 核心数字：累计、月均、每条，以及主频道的 RPM。
@@ -241,3 +254,4 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 - `references/collab.md`：多人协作频道的分工分析，包括抽帧、逐帧记录和对应页面。
 - `references/compliance.md`：抖音 / 小红书合规规则、`compliance_check.py` 的命中怎么改。
 - `references/gear.md`：拍摄器材和拍摄方式怎么找证据、怎么归类、`gear.json` 的格式。
+- `references/narration.md`：旁白分析，包括判断旁白型频道、`narration_stats.py` 各指标怎么读、写稿 / 翻译 / 念稿 / 配音的证据怎么认、页面。

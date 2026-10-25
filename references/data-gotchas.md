@@ -40,3 +40,4 @@
 - **Buy Me a Coffee**：页面上直接写着 “1,239 supporters”，这是去重后的支持者人数，不是打赏次数。
 - **Social Blade / SpeakRJ**：用来看历史播放走势和最近 30 天的播放量。Social Blade 可以用 `r.jina.ai/https://socialblade.com/youtube/handle/<h>/monthly` 抓取。注意它的播放量包含 Shorts。
 - **RSS**：`youtube.com/feeds/videos.xml?channel_id=UC…` 给出最近 15 条视频的精确发布时间和播放量。
+- 截 1080p 单帧：`--download-sections` 报 ffmpeg 251、ffmpeg 读 googlevideo 地址报 “certificate verify failed” 时，下载整条画面（`-f "bv*[height=1080][ext=mp4]"`）再本地截，输出用 png（jpg 会报 mjpeg YUV 错误）。下载中途的 `.part` 文件也能截已下完的部分。
