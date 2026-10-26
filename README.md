@@ -87,6 +87,8 @@ python3 $S/narration_stats.py WORK/data/handle --subs WORK/subs --comments WORK/
 python3 $S/static_cam.py WORK/collab/video/*.mp4            # 每条视频有多少秒是固定机位（三脚架 / 放下），区分三脚架和有人跟拍
 python3 $S/frame_sample.py WORK/data/handle --out WORK/collab --every 20   # 多人协作：每 20 秒抽一帧拼联系表
 python3 $S/compute_report.py WORK/config.json                # 计算，输出 numbers.json、report.md、CSV、deck.json
+python3 $S/post_monetization.py WORK/data/handle WORK/data_later/handle --monetized YYYY-MM-DD --rpm 4 --numbers WORK/out/numbers.json \
+  --out WORK/out/post_monetization.json --md WORK/out/post_monetization.md --slides WORK/out/money_slides.json   # 开通收益后的收入和月均 + 明年预估（默认口径）
 python3 $S/compliance_check.py WORK/out/deck.json           # 抖音 / 小红书合规检查
 $S/build_decks.sh WORK/out/deck.json WORK 报告              # 一次生成三份 PPT，各自渲染检查、导出 PDF，并出视频版预览图
 NODE_PATH=~/.cache/ycr-node/node_modules \

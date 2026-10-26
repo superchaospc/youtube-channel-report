@@ -3,7 +3,7 @@ name: youtube-channel-report
 description: >-
   Analyze a YouTube creator end to end and deliver a data-backed Chinese PowerPoint report in three files — a 16:9 landscape deck, a 9:16 portrait (竖屏/竖版) reading deck for phones, and a 9:16 portrait video deck that keeps the whole bottom free for the user's own 16:9 landscape facecam (视频制作版): exact per-video
   views (long videos vs Shorts), revenue estimated from RPM or back-calculated from income the creator disclosed,
-  monthly and per-video income in USD/CNY, the top-10 videos and what each earned, topic popularity vs. how often
+  monthly and per-video income in USD/CNY counted from the month the channel was monetized (开通收益后), a next-12-month income projection (明年预估 / 明年每月收益), the top-10 videos and what each earned, topic popularity vs. how often
   each topic is filmed, upload cadence over time, video length vs views (视频时长), who the audience is and what the comments say (观众是谁, 观众评论: comment languages, self-reported countries and ages, comment themes), the creator's account matrix (sub-channels, TikTok, Instagram,
   Buy Me a Coffee tips), who the creator is (人物背景: age, hometown, past jobs, family, how their background
   turns into topics, what top comments love about them), and how they film — shooting styles counted from frames plus the likely camera / mic
@@ -84,7 +84,9 @@ python3 $S/narration_stats.py $W/data/<handle> --subs $W/subs --comments $W/comm
 
 读油管自动字幕的逐词时间，算出旁白占全片时长、每分钟词数（另给播放前 3 条的中位数，和别的频道比时用这个）、uh/um 口头语、过去时回顾、模板环节（钩子开头、自我介绍、报金额、换算美元、提问、告别），列出“透明人 → transparent person”这类直译候选；加 `--comments` 时还统计夸声音、怀疑 AI 配音、问写稿的评论，以及博主本人关于口音和配音的回复。
 
-**旁白占比 60% 以上、对镜头画面不到 30% 的，算旁白型频道**（用户要求，2026-10-25，kiki in China）：旁白就是报告重点，要单独做「旁白分析」一块，6 页左右，并判断旁白是“中文写稿 → 翻译 → 本人念 → 后期配上去”的哪几步，每一步标“有证据 / 推断”。不是旁白型的，只在「拍摄手法」里放一页“原声还是旁白”。判断标准、证据怎么认、页面怎么排见 `references/narration.md`。
+**先确认旁白是不是本人的声音，再决定旁白是不是重点**（用户纠正，2026-10-25，Hey KaKa）：找出博主对着镜头说英文的片段（自动字幕里 `>>` 换人标记前后、抽帧里正对镜头张嘴的画面），和后期旁白比口音、句子长短、缩写和口头语。本人只会说短句、有口音，旁白却流利、书面、几乎不缩写，就判断为 **AI 配音**：只在「拍摄手法」里放“本人 vs 旁白”两页（截帧对比 + 线索），不做「旁白分析」一块，也不要把“照稿念、念错”当成本人朗读的证据。旁白占比高不等于旁白是核心，要看观众是冲什么来的（人物、故事、题材）。规则只是起点，不要机械套用；样本少（10 条以内）时，时长、题材等块各压成一页。
+
+确认是本人声音后，**旁白占比 60% 以上、对镜头画面不到 30% 的，算旁白型频道**（用户要求，2026-10-25，kiki in China）：旁白就是报告重点，要单独做「旁白分析」一块，6 页左右，并判断旁白是“中文写稿 → 翻译 → 本人念 → 后期配上去”的哪几步，每一步标“有证据 / 推断”。不是旁白型的，只在「拍摄手法」里放一页“原声还是旁白”。判断标准、证据怎么认、页面怎么排见 `references/narration.md`。
 
 ### 3. 定 RPM
 
@@ -94,6 +96,25 @@ python3 $S/narration_stats.py $W/data/<handle> --subs $W/subs --comments $W/comm
 3. 都没有，就按 `references/rpm-and-income.md` 的默认表选，并在回复里说明这是假设。
 
 用户给了一个 RPM 区间（比如 5–7）时，分别算两端和中值，结论用中值。汇率默认实时获取。
+
+### 3b. 开通收益后的收入 + 明年预估（默认口径）
+
+**收入和月均默认只算开通收益之后的播放，并且每份报告都加明年预估**（用户要求，2026-10-26，Sasa）。开通前的播放不计收益，按全部播放算会偏高；起步期长的频道，从第一条视频算月均又会被拉低。
+
+1. **定开通日期**：依次找博主自己说的（“刚开通收益”“first YouTube income”类视频、置顶评论）→ 评论里最早恭喜开通的日期 → 都没有就按订阅刚过 1,000 的时间推，标“假设”。在字幕和评论里搜 `monetiz|first (youtube )?income|adsense|partner program`。
+2. **隔几个小时再抓一次**（8 小时以上）：`python3 $S/fetch_channel.py @handle --out $W/data_later`。两次之差就是每条视频现在每天涨多少播放。最好在抓完字幕、评论之后再抓，正好隔开。
+3. 跑计算（`--numbers` 要等第 5 步 `compute_report.py` 跑完，取汇率）：
+
+```bash
+python3 $S/post_monetization.py $W/data/<handle> $W/data_later/<handle> --monetized 2026-07-01 --rpm 4 \
+  --numbers $W/out/numbers.json --titles $W/titles_zh.json \
+  --out $W/out/post_monetization.json --md $W/out/post_monetization.md --slides $W/out/money_slides.json
+```
+
+- 开通后发布的视频全部计入；开通前的老视频只算开通后新增的播放。第三方统计站的历史播放一般拿不到（Social Blade 月度数据要登录、Wayback 的视频页是空壳），所以按现在每天的播放推算：开通后出过带火全频道的爆款时，爆款之后按现在的速度算，之前按 0.25 倍算；每条最多算到当前播放的一半。
+- 明年预估（下个月起 12 个月）= 爆款和 30 天内新视频（每 45 天减半）+ 其余老视频（每 120 天减半）+ 新视频（最近 60 天的更新节奏 × 开通后视频去掉爆款的平均播放 × 85%）。不假设再出爆款，页面上要写“预估，不构成收益承诺”。
+- `--slides` 生成 6 页草稿：开通后收益合计、开通后平均每月、开通后每条、开通后收益前 10、明年预估、明年的播放从哪来。用它们**替换** `compute_report.py` 生成的总收入、平均每月、平均每条、前 10 这几页；把（…）占位和视频版的短名填上。封面 KPI、「一页看懂」都改成开通后月均，并放一格明年每月。
+- 用户明确要按全部播放算时，才用 `compute_report.py` 原来的累计口径。
 
 ### 4. AI 补两份文件
 
@@ -132,7 +153,7 @@ python3 $S/compute_report.py $W/config.json
 |---|---|
 | 人物背景 | 他是谁、经历、家人和身边人 |
 | 频道情况 | 账号矩阵、发展历程、播放怎么涨起来的（每条播放的散点图）、几次起飞（月度新增播放） |
-| 收入情况 | RPM 说明、收入合计、平均每月、平均每条、播放最高的 10 条、副频道 |
+| 收入情况 | RPM 说明、开通后收入合计、开通后平均每月、开通后每条、开通后收益前 10、明年预估、明年的播放从哪来、副频道（见 3b） |
 | 拍摄器材 | 器材推断、证据截帧、为什么用这套器材 |
 | 拍摄手法 | 各种机位占比、机位用法、实际画面、一个场景怎么拍、逐条看机位和播放、拍法有没有变 |
 | 旁白分析 | 旁白型频道必做（见 2e）：旁白是核心、旁白量对比、旁白怎么做出来、证据、模板、观众怎么看旁白；其他频道省掉这一块 |
@@ -228,19 +249,20 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
 ### 8. 交付
 
 - 交付前 `grep 人物背景 out/deck.json`：以出镜人为核心的频道必须有这一组页面（见第 6 步），没有就补上再生成。
-- 交付前核对提纲：按顺序列出每页的 `eyebrow`，应该依次是人物背景、频道情况、收入情况、拍摄器材、拍摄手法、（旁白分析）、题材选择、题材表现、视频时长、发布频率、观众是谁、观众评论、总结；旁白型频道（`narration.json` 的旁白占比 60% 以上）必须有「旁白分析」，`grep 旁白分析 out/deck.json` 确认；视频版生成时不能有 `video text too long` 警告。
+- 交付前核对提纲：按顺序列出每页的 `eyebrow`，应该依次是人物背景、频道情况、收入情况、拍摄器材、拍摄手法、（旁白分析）、题材选择、题材表现、视频时长、发布频率、观众是谁、观众评论、总结；旁白型频道（旁白是本人声音、占比 60% 以上；AI 配音不算）必须有「旁白分析」，`grep 旁白分析 out/deck.json` 确认；视频版生成时不能有 `video text too long` 警告。
 - 工作目录里放：横版 `.pptx` + PDF、`-竖屏阅读版.pptx` + PDF、`-竖屏视频版.pptx` + PDF、CSV、`report.md`，然后用 `open -R <横版 pptx>` 在 Finder 里定位。
 - 回复里讲清楚三件事：
-  1. 核心数字：累计、月均、每条，以及主频道的 RPM。
-  2. 用了哪些假设：RPM、汇率、计算月均的起点、哪些平台没算进收入。
+  1. 核心数字：开通后累计、开通后月均、每条、明年合计和明年每月，以及主频道的 RPM。
+  2. 用了哪些假设：RPM、汇率、开通日期和依据、老视频开通后新增怎么估、明年预估的更新节奏、哪些平台没算进收入。
   3. 加了哪些提纲以外的页面；竖版里删掉了哪些表格列。
 - 要发给别人时，发 PDF。PPT 用的是 Mac 字体（苹方），在 Windows 上打开会被替换成别的字体。
 
 ## 口径（每次都一样，别临时改）
 
 - **长视频和 Shorts 分开算**：长视频按 RPM 算；Shorts 按每千次播放 0.10 美元算（可配置）。“去掉 Shorts”指收入和播放都不算 Shorts。
-- **月均** = 累计收入 ÷ 月数。月数从主频道第一条长视频算到今天，用户给了别的起点就用用户的。
-- **每条** = 长视频收入 ÷ 长视频条数。同时给出中位数，因为平均值常被爆款拉高。
+- **累计和月均从开通收益算起**（见 3b）：累计 = 开通后的播放 × RPM；月均 = 开通后累计 ÷ 开通到今天的月数。用户给了别的起点就用用户的。
+- **明年** = 下个月起 12 个月的预估（见 3b），同时给全年合计和平均每月，各一个数，不给区间。
+- **每条** = 开通后发布的长视频的收入 ÷ 条数。同时给出中位数，因为平均值常被爆款拉高。
 - **会员和 Super Thanks** 不单独估算，反推出来的 RPM 里已经包含了它们。
 - **日期用精确日期**，不要用频道页上的“10 months ago”换算。这种相对时间和日历月份对不上，用户按它数会数错。
 - 题材分类、标题翻译、站外打赏的分档比例都是人工判断或假设，PPT 里要写明。
