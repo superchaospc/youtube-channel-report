@@ -353,9 +353,10 @@ R.stacked_columns = (s, d) => {
       const fill = col((series[k] || {}).color, C.accent1);
       rect(s, x, y, bw, h, fill, `col-${i}-${k}`);
       const darkFill = ["accent", "blue", "ink"].includes((series[k] || {}).color);
-      if (h >= 0.3 && c >= 2) txt(s, String(c), { x, y, w: bw, h, fontSize: fsz, bold: true, color: darkFill ? C.background1 : C.text1, align: "center", valign: "middle" });
+      // Dense charts (e.g. one bar per video): bars are too thin for in-bar numbers, keep only the labels on top.
+      if (h >= 0.3 && c >= 2 && cats.length <= 20) txt(s, String(c), { x, y, w: bw, h, fontSize: fsz, bold: true, color: darkFill ? C.background1 : C.text1, align: "center", valign: "middle" });
     });
-    if (!short || totals[i] >= 3) txt(s, String(totals[i]), { x: cx - 0.2, y: y - 0.32, w: pitch + 0.4, h: 0.28, fontSize: fsz, bold: true, color: C.text1, align: "center", valign: "bottom", wrap: true });
+    if (cats.length > 20 ? totals[i] >= maxT * 0.1 : (!short || totals[i] >= 3)) txt(s, String(totals[i]), { x: cx - 0.2, y: y - 0.32, w: pitch + 0.4, h: 0.28, fontSize: fsz, bold: true, color: C.text1, align: "center", valign: "bottom", wrap: true });
     if (i % every === 0) txt(s, short ? m.replace(/^20/, "") : m, { x: cx - 0.3, y: BASE + 0.08, w: pitch + 0.6, h: 0.28, fontSize: fsz, color: C.text1, align: "center", wrap: true });
   });
   note(s, d.note, 6.3);
