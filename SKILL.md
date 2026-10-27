@@ -257,6 +257,15 @@ $S/render_check.sh "$W/<标题>.pptx" $W/png --pdf            # macOS + Keynote
   3. 加了哪些提纲以外的页面；竖版里删掉了哪些表格列。
 - 要发给别人时，发 PDF。PPT 用的是 Mac 字体（苹方），在 Windows 上打开会被替换成别的字体。
 
+## 出处必须有截图（用户要求，2026-10-26，HongLu）
+
+报告里每一条分析的出处都要配截图，紧跟在对应分析页后面加一页 `images`，标题写“出处：…”：
+- **视频里的证据**（自述、App 截图、字幕错词、等级徽章）：按转写时间点用 ffmpeg 截原片帧，图上方写“日期《视频中文名》分:秒”和一句说明；含骑手 ID、手机号这类水印的区域做轻度模糊。
+- **评论原文**：油管用 watch 页；海外短视频平台网页要登录，改用 ttanon.com 的视频页（puppeteer 驱动本机 Chrome，Cloudflare 拦截时用有界面模式和固定 userDataDir；“Load comments”要用真实鼠标点击；楼中楼直接开 `/extra/replies/<视频id>.<评论id>`）。
+- **主页、副号、网页资料**（RPM 文章、搬运视频）：puppeteer 截图，标注网站名和截图日期。
+- 用户提供的资料（文件、规则整理）把对应页渲染出来当截图。没法截图的（比如“账号是买的”这类用户口述），在页面上写明“由用户提供，没有截图”。
+- 横版每行最多 3 张、竖版 1–2 张，视频版每个出处页用一张拼图，不要一张一页。参考实现：`~/tiktok-chinesefooddelivery0-report-2026-10-26/scripts/{evcompose.py,ttanon.js,webclip.js,findframes.py}`。
+
 ## 口径（每次都一样，别临时改）
 
 - **长视频和 Shorts 分开算**：长视频按 RPM 算；Shorts 按每千次播放 0.10 美元算（可配置）。“去掉 Shorts”指收入和播放都不算 Shorts。
